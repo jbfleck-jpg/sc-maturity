@@ -10,6 +10,8 @@ const WEBHOOK_AI        = "https://hook.eu1.make.com/hxjtmnjcmd8ul50wsd8p3hii4jg
 const WEBHOOK_SEND_CODE = "https://hook.eu1.make.com/wx9ax6kfm69gfgc13k85ttk46yc5hbqf";
 // Scénario 4 — Vérification du code email (❌ à renseigner)
 const WEBHOOK_CHECK_CODE = "https://hook.eu1.make.com/8rfm5s2uyj7x9frfh33bbvmflejqps8m";
+const WORKER_AI_URL = "https://sc-maturity-ai.jbfleck.workers.dev";
+
 // ═══════════════════════════════════════════════════════════════════════════
 
 const BLOCKED_DOMAINS = ["gmail.com","googlemail.com","hotmail.com","hotmail.fr","outlook.com","outlook.fr","live.com","live.fr","msn.com","yahoo.com","yahoo.fr","icloud.com","me.com","mac.com","laposte.net","orange.fr","sfr.fr","free.fr","wanadoo.fr","bbox.fr","numericable.fr","aol.com","protonmail.com","proton.me","tutanota.com","gmx.com","gmx.fr","mail.com","yandex.com","zoho.com","fastmail.com"];
@@ -313,17 +315,14 @@ Prose uniquement, pas de bullet points, ton direct et expert.`;
     try {
       // Scénario 2 — Appel via Make (clé API sécurisée côté Make)
       // Appel direct Anthropic (proxy géré par l'artifact Claude)
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const data = await res.json();
-      const comment = data.content?.[0]?.text || "Commentaire indisponible.";
+const res = await fetch(WORKER_AI_URL, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ prompt }),
+});
+if (!res.ok) throw new Error(`Worker error: ${res.status}`);
+const data = await res.json();
+const comment = data.comment || "Commentaire indisponible.";
         setAiComment(comment);
         sendToSheets(comment);
     } catch { setAiComment("Erreur lors de la génération du commentaire."); }
