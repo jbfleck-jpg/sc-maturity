@@ -14,7 +14,7 @@ const WORKER_AI_URL = "https://sc-maturity-ai.jbfleck.workers.dev";
 
 // ═══════════════════════════════════════════════════════════════════════════
 
-const BLOCKED_DOMAINS = ["gmail.com","googlemail.com","hotmail.com";"gmx.com";"hotmail.fr","outlook.com","outlook.fr","live.com","live.fr","msn.com","yahoo.com","yahoo.fr","icloud.com","me.com","mac.com","laposte.net","orange.fr","sfr.fr","free.fr","wanadoo.fr","bbox.fr","numericable.fr","aol.com","protonmail.com","proton.me","tutanota.com","gmx.com","gmx.fr","mail.com","yandex.com","zoho.com","fastmail.com"];
+const BLOCKED_DOMAINS = ["gmail.com","googlemail.com","hotmail.com","gmx.com","hotmail.fr","outlook.com","outlook.fr","live.com","live.fr","msn.com","yahoo.com","yahoo.fr","icloud.com","me.com","mac.com","laposte.net","orange.fr","sfr.fr","free.fr","wanadoo.fr","bbox.fr","numericable.fr","aol.com","protonmail.com","proton.me","tutanota.com","gmx.com","gmx.fr","mail.com","yandex.com","zoho.com","fastmail.com"];
 const validEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const isProEmail = (e) => { const d = e.split("@")[1]?.toLowerCase(); return d && !BLOCKED_DOMAINS.includes(d); };
 
