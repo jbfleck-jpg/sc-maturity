@@ -1,4 +1,6 @@
 import { useState } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 
 // ══ MAKE WEBHOOKS ══════════════════════════════════════════════════════════
@@ -356,35 +358,49 @@ const comment = data.comment || "Commentaire indisponible.";
   };
 
   const exportResult = () => {
-    const txt = [
-      `MATURITÉ SUPPLY CHAIN — RÉSULTATS`,
-      `${form.prenom} ${form.nom} | ${form.entreprise} | ${form.email}`,
-      `Date : ${new Date().toLocaleDateString("fr-FR")}`,
-      ``,
-      `SCORE GLOBAL : ${avgScore}/5 — ${level.label}`,
-      ``,
-      `SCORES PAR THÉMATIQUE :`,
-      ...THEMES.map(t => `• ${t} : ${themeScore(t)}/5`),
-      ``,
-      `DÉTAIL DES RÉPONSES :`,
-      ...QUESTIONS.map((q,i) => `Q${i+1} [${q.theme}] : ${q.options[qScore(i)]} (niveau ${qScore(i)})`),
-      ``,
-      `ANALYSE PERSONNALISÉE :`,
-      aiComment,
-      ``,
-      `NIVEAUX DE MATURITÉ :`,
-      ...MATURITY_LEVELS.map(l => `${l.level} — ${l.label} : ${l.desc}`),
-      ``,
-      `---`,
-      `Jean-Baptiste FLECK — Aravis Performance — Certifié QUALIOPI`,
-      `📞 07 64 54 01 58 | ✉ jbfleck@aravisperformance.com | 🌐 www.aravisperformance.com`,
-    ].join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([txt], { type:"text/plain;charset=utf-8" }));
-    a.download = `maturite-supply-chain-${form.entreprise.replace(/\s+/g,"-")}.txt`;
-    a.click();
-  };
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const blue = [30, 64, 175];
+  const dark = [15, 23, 42];
+  const gray = [71, 85, 105];
+  const lightBlue = [239, 246, 255];
+  const pageW = 210;
+  const margin = 20;
 
+  doc.setFillColor(...blue);
+  doc.rect(0, 0, pageW, 28, "F");
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("Aravis Performance", margin, 11);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(191, 219, 254);
+  doc.text("Cabinet Conseil Supply Chain & Excellence Operationnelle", margin, 17);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("Rapport de maturite Supply Chain", margin, 24);
+
+  let y = 38;
+  doc.setFillColor(...lightBlue);
+  doc.roundedRect(margin, y, pageW - margin * 2, 22, 3, 3, "F");
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...dark);
+  doc.text(`${form.prenom} ${form.nom}`, margin + 4, y + 7);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...gray);
+  doc.text(`${form.entreprise}  -  ${form.email}`, margin + 4, y + 13);
+  doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, margin + 4, y + 19);
+
+  y += 30;
+  doc.setFillColor(...blue);
+  doc.roundedRect(margin, y, (pageW - margin * 2) / 2 - 4, 22, 3, 3, "F");
+  doc.setFontSize(22);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text(`${avgScore}/5`, margin + 6, y + 1
   // ══ INTRO ══════════════════════════════════════════════════
   if (step === "intro") return (
     <div style={{ minHeight:"100vh", background:"#f8fafc" }}>
