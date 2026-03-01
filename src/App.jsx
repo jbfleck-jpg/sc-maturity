@@ -11,6 +11,7 @@ const WEBHOOK_SEND_CODE  = "https://hook.eu1.make.com/wx9ax6kfm69gfgc13k85ttk46y
 const WEBHOOK_CHECK_CODE = "https://hook.eu1.make.com/8rfm5s2uyj7x9frfh33bbvmflejqps8m";
 const WEBHOOK_NOTIFY     = "https://hook.eu1.make.com/oy47delx1iom8lw8qrn14yqds2u8xn89";
 const WORKER_AI_URL      = "https://sc-maturity-ai.jbfleck.workers.dev";
+const CALENDLY_URL       = "https://calendly.com/jbfleck/30min";
 
 const C1 = "#0C2F72";
 const C2 = "#4472C4";
@@ -32,16 +33,18 @@ const hexToRgb = (hex) => [
   parseInt(hex.slice(5,7),16)
 ];
 
-// Parse AI text into 4 named sections by double-newline paragraphs
+// Parse AI text into 5 named sections by double-newline paragraphs
 const parseAiSections = (text) => {
   if (!text) return null;
   const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-  if (paras.length >= 4) {
-    return { strengths: paras[0], improvements: paras[1], recommendations: paras[2], nextSteps: paras.slice(3).join("\n\n") };
+  if (paras.length >= 5) {
+    return { maturityLevel: paras[0], strengths: paras[1], improvements: paras[2], recommendations: paras[3], nextSteps: paras.slice(4).join("\n\n") };
+  } else if (paras.length === 4) {
+    return { maturityLevel: paras[0], strengths: paras[1], improvements: paras[2], recommendations: paras[3], nextSteps: "" };
   } else if (paras.length === 3) {
-    return { strengths: paras[0], improvements: paras[1], recommendations: paras[2], nextSteps: "" };
+    return { maturityLevel: "", strengths: paras[0], improvements: paras[1], recommendations: paras[2], nextSteps: "" };
   } else {
-    return { strengths: text, improvements: "", recommendations: "", nextSteps: "" };
+    return { maturityLevel: "", strengths: text, improvements: "", recommendations: "", nextSteps: "" };
   }
 };
 
@@ -305,51 +308,76 @@ export default function App() {
 
   const generateComment = async () => {
     setLoading(true);
+
+    // Sort themes by score for targeted sections
+    const sortedByScore = THEMES.map(t => ({ t, s: themeScore(t) })).sort((a,b) => b.s - a.s);
+    const top3 = sortedByScore.slice(0, 3).map(x => `${x.t} : ${x.s}/5`).join(", ");
+    const bottom3 = [...sortedByScore].slice(-3).reverse().map(x => `${x.t} : ${x.s}/5`).join(", ");
     const ctx = THEMES.map(t=>`${t} : ${themeScore(t)}/5`).join(", ");
+
+    // Proximity to next maturity level
+    const nextLevel = Math.min(Math.ceil(avgScore + 0.01), 5);
+    const distToNext = Math.round((nextLevel - avgScore) * 100) / 100;
+    let proximityInstruction = "";
+    if (distToNext <= 0.1) {
+      proximityInstruction = `Score ${avgScore}/5 : a ${distToNext} du niveau ${nextLevel}. Preciser qu'en ciblant 5 chapitres cles, le niveau ${nextLevel} est atteignable rapidement.`;
+    } else if (distToNext <= 0.25) {
+      proximityInstruction = `Score ${avgScore}/5 : a ${distToNext} du niveau ${nextLevel}. Recommander de consolider le niveau actuel sur 3 chapitres prioritaires avant de viser le niveau ${nextLevel}.`;
+    } else {
+      proximityInstruction = `Score ${avgScore}/5 : a ${distToNext} du niveau ${nextLevel}. Pour progresser vers le niveau ${nextLevel}, travailler en profondeur sur 5 chapitres prioritaires.`;
+    }
+
     const prompt = `Tu es Jean-Baptiste Fleck, consultant expert en supply chain, fondateur d'Aravis Performance, certifie Qualiopi, 25 ans d'experience, plus de 20 audits-diagnostics realises.
 
 Un dirigeant de PME industrielle vient de realiser une auto-evaluation de la maturite de sa supply chain.
-Resultats par thematique : ${ctx}
-Score global : ${avgScore}/5 - Niveau : ${level.label} - ${level.desc}
+Tous les resultats par thematique : ${ctx}
+Score global : ${avgScore}/5 - Niveau actuel : ${level.label} (niveau ${Math.round(avgScore)}) - ${level.desc}
 
-Redige une analyse en EXACTEMENT 4 paragraphes separes chacun par UNE LIGNE VIDE.
+Redige une analyse en EXACTEMENT 5 paragraphes separes chacun par UNE LIGNE VIDE.
 REGLES ABSOLUES :
 - TEXTE BRUT UNIQUEMENT. Aucun markdown, aucun #, aucun **, aucun tiret de liste.
 - Chaque phrase fait MAXIMUM 18 mots.
 - Reviens a la ligne apres CHAQUE phrase (une phrase = une ligne).
-- MAXIMUM 600 mots au total.
+- MAXIMUM 700 mots au total.
 - Ton direct, expert, bienveillant.
+- Ne jamais ecrire "mon audit". Ecrire "un audit" ou "l'audit Aravis Performance".
 - Commence chaque paragraphe par son titre en MAJUSCULES sur sa propre ligne.
 
-PARAGRAPHE 1 - titre : POINTS FORTS
-Identifie les 2 ou 3 thematiques avec les meilleurs scores.
-Valorise ce qui fonctionne bien de facon concrete.
-Mentionne les pratiques solides observees.
-(6 a 8 phrases)
+PARAGRAPHE 1 - titre : VOTRE NIVEAU DE MATURITE
+${proximityInstruction}
+Explique en 3 phrases ce que ce niveau signifie concretement pour l'entreprise.
+(4 a 5 phrases au total)
 
-PARAGRAPHE 2 - titre : POINTS DE PROGRESSION
-Identifie les 2 ou 3 thematiques avec les scores les plus faibles.
-Propose deux ou trois pistes concretes d'amelioration.
-Sois precis sur les actions a engager en priorite.
-(6 a 8 phrases)
+PARAGRAPHE 2 - titre : POINTS FORTS
+Les 3 meilleures thematiques sont exactement : ${top3}
+Valorise uniquement ces 3 thematiques, pas d'autres.
+Pour chacune, explique concretement ce que le score revele comme pratiques solides en place.
+(6 a 7 phrases)
 
-PARAGRAPHE 3 - titre : RECOMMANDATIONS
-Rappelle que cette auto-evaluation est declarative et indicative.
-Un audit terrain revele souvent des ecarts significatifs avec la perception interne.
-Presente systematiquement les gains potentiels observes apres un audit-diagnostic complet :
-Performance de livraison : +15 a +30 pourcent.
-Reduction des stocks : 25 a 40 pourcent.
-Fiabilite des previsions : +25 a +70 pourcent.
-Productivite : +10 a +20 pourcent.
-Capacite de production : +10 a +20 pourcent.
-Reduction des couts logistiques : 25 a 40 pourcent.
-(6 a 8 phrases)
+PARAGRAPHE 3 - titre : POINTS D'AMELIORATION
+Les 3 thematiques avec les scores les plus faibles sont exactement : ${bottom3}
+Traite uniquement ces 3 thematiques, pas d'autres.
+Pour chacune, propose une action concrete et prioritaire a engager.
+(6 a 7 phrases)
 
-PARAGRAPHE 4 - titre : PROCHAINES ETAPES
-Explique concretement les avantages d'un vrai audit-diagnostic terrain.
+PARAGRAPHE 4 - titre : RECOMMANDATIONS
+Commence par rappeler que cette auto-evaluation est declarative et indicative.
+Explique qu'un audit terrain revele souvent des ecarts significatifs avec la perception interne.
+Invite a realiser un audit-diagnostic Aravis Performance pour objectiver la situation reelle.
+Ensuite, presente les 6 gains potentiels EXACTEMENT sur des lignes separees, sans ponctuation finale :
+Performance de livraison : +15 a +30 %
+Reduction des stocks : 25 a 40 %
+Fiabilite des previsions : +25 a +70 %
+Productivite : +10 a +20 %
+Capacite de production : +10 a +20 %
+Reduction des couts logistiques : 25 a 40 %
+(9 a 10 lignes en tout pour ce paragraphe)
+
+PARAGRAPHE 5 - titre : PROCHAINES ETAPES
+Explique les avantages concrets d'un audit-diagnostic terrain par rapport a cette auto-evaluation.
 Insiste sur la necessite d'aller plus loin pour identifier davantage de points forts et d'axes d'amelioration.
-Rappelle qu'un audit complet contient entre 150 et 200 questions par domaine, soit bien plus que cette auto-evaluation.
-Invite chaleureusement a contacter Aravis Performance pour un audit complet ou cible.
+Rappelle qu'un audit complet contient entre 150 et 200 questions par domaine.
+Invite chaleureusement a contacter Aravis Performance pour un audit complet ou cible sur une fonction prioritaire.
 (5 a 6 phrases)`;
 
     try {
@@ -545,10 +573,11 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     doc.text("Analyse personnalisee", margin+4, y+6); y+=14;
 
     const sectionDefs = [
-      { title:"POINTS FORTS",         color:[22,163,74],   text:aiSections?.strengths||"" },
-      { title:"POINTS DE PROGRESSION", color:[217,119,6],   text:aiSections?.improvements||"" },
-      { title:"RECOMMANDATIONS",       color:[12,47,114],   text:aiSections?.recommendations||"" },
-      { title:"PROCHAINES ETAPES",     color:[13,148,136],  text:aiSections?.nextSteps||"" },
+      { title:"VOTRE NIVEAU DE MATURITE", color:[12,47,114],  text:aiSections?.maturityLevel||"" },
+      { title:"POINTS FORTS",             color:[22,163,74],  text:aiSections?.strengths||"" },
+      { title:"POINTS D'AMELIORATION",    color:[217,119,6],  text:aiSections?.improvements||"" },
+      { title:"RECOMMANDATIONS",          color:[124,58,237], text:aiSections?.recommendations||"" },
+      { title:"PROCHAINES ETAPES",        color:[13,148,136], text:aiSections?.nextSteps||"" },
     ];
 
     sectionDefs.forEach(({ title, color, text }) => {
@@ -563,8 +592,8 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       doc.text(lines, margin, y); y+=lines.length*4.5+7;
     });
 
-    // Contact block
-    if (y>248) { doc.addPage(); y=20; }
+    // Contact block — always on same page, never orphaned
+    if (y > 260) { doc.addPage(); y=20; }
     doc.setFillColor(...blue); doc.roundedRect(margin,y,contentW,28,3,3,"F");
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
     doc.text("Jean-Baptiste FLECK - Fondateur Aravis Performance", margin+4, y+8);
@@ -824,18 +853,23 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
             <div style={{ color:"#64748b",fontStyle:"italic",textAlign:"center",padding:32 }}>⏳ Génération de votre analyse en cours…</div>
           ) : aiSections ? (
             <>
+              {aiSections.maturityLevel&&(
+                <SectionBlock title="Votre niveau de maturité" color={C1} bg="#eff6ff">
+                  {cleanSectionText(aiSections.maturityLevel,"VOTRE NIVEAU DE MATURITE","VOTRE NIVEAU DE MATURITÉ")}
+                </SectionBlock>
+              )}
               {aiSections.strengths&&(
                 <SectionBlock title="Points forts" color="#16a34a" bg="#f0fdf4">
                   {cleanSectionText(aiSections.strengths,"POINTS FORTS")}
                 </SectionBlock>
               )}
               {aiSections.improvements&&(
-                <SectionBlock title="Points de progression" color="#d97706" bg="#fffbeb">
-                  {cleanSectionText(aiSections.improvements,"POINTS DE PROGRESSION")}
+                <SectionBlock title="Points d'amélioration" color="#d97706" bg="#fffbeb">
+                  {cleanSectionText(aiSections.improvements,"POINTS D'AMELIORATION","POINTS D'AMÉLIORATION")}
                 </SectionBlock>
               )}
               {aiSections.recommendations&&(
-                <SectionBlock title="Recommandations" color={C1} bg="#eff6ff">
+                <SectionBlock title="Recommandations" color="#7c3aed" bg="#f5f3ff">
                   {cleanSectionText(aiSections.recommendations,"RECOMMANDATIONS")}
                 </SectionBlock>
               )}
@@ -901,7 +935,11 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
         {/* Contact */}
         <div style={{ background:C1,borderRadius:16,padding:28,marginBottom:20 }}>
           <h2 style={{ fontSize:15,fontWeight:600,color:"#fff",marginBottom:8 }}>Envie d'aller plus loin ?</h2>
-          <p style={{ color:"#bfdbfe",fontSize:14,lineHeight:1.7,marginBottom:20 }}>Contactez Jean-Baptiste FLECK pour un audit supply chain complet ou ciblé sur une fonction prioritaire.</p>
+          <p style={{ color:"#bfdbfe",fontSize:14,lineHeight:1.7,marginBottom:16 }}>Contactez Jean-Baptiste FLECK pour un audit supply chain complet ou ciblé sur une fonction prioritaire.</p>
+          <a href="https://calendly.com/jbfleck/30min" target="_blank" rel="noopener noreferrer"
+            style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"#fff",color:C1,borderRadius:10,padding:"14px 20px",fontSize:15,fontWeight:700,textDecoration:"none",marginBottom:16,boxShadow:"0 2px 12px rgba(0,0,0,0.18)" }}>
+            📅 Prendre rendez-vous avec Jean-Baptiste
+          </a>
           <div style={{ background:"rgba(255,255,255,0.15)",borderRadius:10,padding:"16px 20px",display:"flex",flexDirection:"column",gap:10 }}>
             {[{icon:"📞",val:"07 64 54 01 58"},{icon:"✉️",val:"jbfleck@aravisperformance.com"},{icon:"🌐",val:"www.aravisperformance.com"}].map((c,i)=>(
               <div key={i} style={{ fontSize:14,color:"#e0f2fe",display:"flex",gap:10,alignItems:"center" }}>
@@ -931,10 +969,18 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
                   style={{ width:"100%",border:"2px solid #e2e8f0",borderRadius:8,padding:"9px 12px",fontSize:14,outline:"none",boxSizing:"border-box" }}/>
               </div>
             )}
-            <label style={{ display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:14,color:"#475569" }}>
+            <label style={{ display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:14,color:"#475569",marginBottom:10 }}>
               <input type="checkbox" checked={contactPref.email} onChange={()=>handleContactChange("email")} style={{ width:18,height:18,accentColor:C1,cursor:"pointer" }}/>
               ✉️ Par email ({form.email})
             </label>
+            {/* Calendly shortcut */}
+            <div style={{ borderTop:"1px solid #e2e8f0",paddingTop:12,marginTop:4 }}>
+              <p style={{ fontSize:12,color:"#64748b",marginBottom:8 }}>Ou planifiez directement un créneau :</p>
+              <a href="https://calendly.com/jbfleck/30min" target="_blank" rel="noopener noreferrer"
+                style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:C1,color:"#fff",borderRadius:8,padding:"11px 16px",fontSize:14,fontWeight:600,textDecoration:"none" }}>
+                📅 Prendre rendez-vous via Calendly
+              </a>
+            </div>
           </div>
           {!contactSelected&&<div style={{ background:"#fef2f2",borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:13,color:"#dc2626" }}>⚠️ Veuillez sélectionner une option de recontact pour télécharger votre rapport.</div>}
 
