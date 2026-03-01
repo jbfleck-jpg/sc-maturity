@@ -103,15 +103,59 @@ const THEMES = [...new Set(QUESTIONS.map(q => q.theme))];
 
 const MATURITY_LEVELS = [
   { level:0, label:"Implicite",  color:"#dc2626", desc:"Aucun processus formalisé. Gestion individuelle, réactive, en silos.", detail:"La Supply Chain repose sur l'expérience individuelle et les habitudes locales. Les décisions sont prises au cas par cas, en réaction aux urgences. Les dysfonctionnements sont acceptés comme une fatalité.", keywords:"Non formalisé · Réactif · Silos · Absence de stratégie" },
-  { level:1, label:"Réactif",    color:"#ea580c", desc:"Processus documentés par fonction, mais cloisonnés.", detail:"Les processus commencent à être formalisés par fonction (achats, production, logistique) par nécessité. La documentation existe mais reste cloisonnée. Les KPIs locaux sont suivis sans analyse globale.", keywords:"Processus documentés · Silos persistants · KPIs locaux · Réactivité" },
+  { level:1, label:"Réactive",    color:"#ea580c", desc:"Processus documentés par fonction, mais cloisonnés.", detail:"Les processus commencent à être formalisés par fonction (appro, production, logistique, adv) par nécessité. La documentation existe mais reste cloisonnée. Des KPIs locaux peuvent être suivis et exister sans analyse globale et régulière.", keywords:"Processus documentés · Silos persistants · KPIs locaux · Réactivité" },
   { level:2, label:"Maîtrisée",  color:"#d97706", desc:"Processus alignés sur la stratégie globale, début de collaboration.", detail:"Tous les processus sont formalisés et alignés sur une stratégie globale. L'entreprise cherche à stabiliser ses opérations. Un responsable SC est nommé. Les silos commencent à s'atténuer.", keywords:"Processus alignés · KPIs transverses · Stabilisation · Outils centralisés" },
-  { level:3, label:"Intégrée",   color:"#65a30d", desc:"Vision globale, S&OP déployé, collaboration systématique.", detail:"Toutes les fonctions SC travaillent ensemble. Un S&OP synchronise demande et offre. La collaboration est systématique en interne et avec les partenaires. Les outils ERP/WMS/TMS sont intégrés.", keywords:"Collaboration systématique · S&OP · Vision globale · Intégration des outils" },
-  { level:4, label:"Améliorée",  color:"#16a34a", desc:"Amélioration continue, décisions data-driven, centre d'excellence.", detail:"L'entreprise intègre l'amélioration continue dans sa culture SC. Les processus sont optimisés via Lean, Six Sigma, DDMRP. Les décisions sont data-driven. Un centre d'excellence SC capitalise les bonnes pratiques.", keywords:"Amélioration continue · Data-driven · Lean/Six Sigma · Centre d'excellence" },
+  { level:3, label:"Intégrée",   color:"#65a30d", desc:"Vision globale, S&OP déployé, collaboration systématique.", detail:"Toutes les fonctions SC travaillent ensemble. Un S&OP synchronise l'offre et la demande. La collaboration est systématique en interne et avec les partenaires. Les outils ERP/WMS/TMS sont intégrés.", keywords:"Collaboration systématique · S&OP · Vision globale · Intégration des outils" },
+  { level:4, label:"Améliorée",  color:"#16a34a", desc:"Amélioration continue, décisions data-driven, centre d'excellence.", detail:"L'entreprise intègre l'amélioration continue dans sa culture SC. Les processus sont optimisés via Lean, Six Sigma, DDMRP. Les décisions sont data-driven. Un service méthode logistique capitalise les bonnes pratiques et mène des projets d'amélioration ou de transformation.", keywords:"Amélioration continue · Data-driven · Lean/Six Sigma · Centre d'excellence" },
   { level:5, label:"Optimisée",  color:"#0d9488", desc:"Centre de profit différenciant, IA/IoT, visibilité end-to-end.", detail:"La SC est perçue comme un centre de profit différenciant. Les technologies avancées (IA, IoT, blockchain) sont intégrées. Les processus sont auto-optimisés. Les services logistiques sont monétisés.", keywords:"Centre de profit · IA/IoT/Blockchain · Visibilité end-to-end · Monétisation" },
 ];
 
 // FIX 1: getLevel utilise Math.floor — ne pas modifier
 const getLevel = (s) => MATURITY_LEVELS.find(l => l.level === Math.min(Math.floor(s), 5)) || MATURITY_LEVELS[0];
+
+
+// ── NutriScore Supply Chain ───────────────────────────────────────────────────
+const NutriScore = ({ avgScore }) => {
+  const levels = MATURITY_LEVELS;
+  const currentLevel = Math.floor(avgScore);
+  const labels = ["F","E","D","C","B","A"]; // 0→F, 5→A (inversé pour supply chain)
+  // On mappe : niveau 0=F(rouge), 1=E(orange), 2=D(ambre), 3=C(vertclair), 4=B(vert), 5=A(teal)
+  const nutriLetters = ["F","E","D","C","B","A"];
+  const w = 40; const wActive = 56; const h = 44; const hActive = 60;
+  return (
+    <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"center", gap:4, margin:"16px 0" }}>
+      {levels.map((l, i) => {
+        const isActive = l.level === currentLevel;
+        const letter = nutriLetters[l.level];
+        return (
+          <div key={l.level} style={{
+            width: isActive ? wActive : w,
+            height: isActive ? hActive : h,
+            background: l.color,
+            borderRadius: isActive ? 10 : 6,
+            display:"flex", flexDirection:"column",
+            alignItems:"center", justifyContent:"center",
+            boxShadow: isActive ? `0 4px 18px ${l.color}88` : "none",
+            transition:"all 0.3s",
+            opacity: isActive ? 1 : 0.45,
+            position:"relative",
+          }}>
+            <span style={{
+              color:"#fff", fontWeight:900,
+              fontSize: isActive ? 24 : 16,
+              lineHeight:1,
+            }}>{letter}</span>
+            {isActive && (
+              <span style={{ color:"#fff", fontSize:9, fontWeight:700, marginTop:3, opacity:0.9 }}>
+                Niv. {l.level}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 // ── Shared styles ────────────────────────────────────────────────────────────
 const card = { background:"#fff", borderRadius:16, padding:40, boxShadow:"0 4px 24px #0001", maxWidth:680, width:"100%", margin:"0 auto" };
@@ -212,8 +256,8 @@ const drawRadarPDF = (doc, cx, cy, radius, themeScores, avgScore) => {
 };
 
 const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
-  const barH = 8; const gap = 4;
-  const labelW = 62; const scoreW = 14;
+  const barH = 9; const gap = 5;
+  const labelW = 66; const scoreW = 14;
   const barAreaW = chartW - labelW - scoreW - 6;
   const totalH = barData.length * (barH + gap);
 
@@ -236,7 +280,8 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
     const y = startY + i*(barH+gap);
     const bw = Math.max(2, (barAreaW * item.score) / 5);
     const rgb = hexToRgb(getLevel(item.score).color);
-    doc.setFontSize(7); doc.setTextColor(70,70,70);
+    // Polices agrandies pour meilleure lisibilité
+    doc.setFontSize(8.5); doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
     const words = item.theme.split(" ");
     const lines = []; let curr = "";
     words.forEach(w => {
@@ -248,8 +293,9 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
     else { doc.text(lines[0], startX, y+3); doc.text(lines[1]||"", startX, y+barH); }
     doc.setFillColor(...rgb);
     doc.roundedRect(startX+labelW, y, bw, barH, 1.5, 1.5, "F");
-    doc.setFontSize(7); doc.setTextColor(30,30,30);
+    doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
     doc.text(`${item.score}`, startX+labelW+bw+3, y+barH-1);
+    doc.setFont("helvetica","normal");
   });
 
   const legendY = startY + totalH + 10;
@@ -497,6 +543,34 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
 
     y += rowH + 5;
 
+    // ── NutriScore PDF ─────────────────────────────────────────────────────────
+    {
+      const ns = MATURITY_LEVELS;
+      const curLevel = Math.floor(avgScore);
+      const nutriLetters = ["F","E","D","C","B","A"];
+      const boxW = 24; const boxH = 14; const boxGap = 3;
+      const totalNW = ns.length * boxW + (ns.length-1) * boxGap;
+      let nx = margin + (contentW - totalNW) / 2;
+      const ny = y;
+      ns.forEach((l) => {
+        const isActive = l.level === curLevel;
+        const rgb = hexToRgb(l.color);
+        doc.setFillColor(...rgb);
+        doc.setGState && doc.setGState(new doc.GState({ opacity: isActive ? 1 : 0.4 }));
+        const bh = isActive ? boxH + 4 : boxH;
+        const by = isActive ? ny - 2 : ny + (boxH + 4 - boxH) / 2;
+        doc.roundedRect(nx, by, boxW, bh, isActive ? 2.5 : 1.5, isActive ? 2.5 : 1.5, "F");
+        doc.setFontSize(isActive ? 10 : 8); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+        doc.text(nutriLetters[l.level], nx + boxW/2, by + (isActive ? 8 : 6.5), { align:"center" });
+        if (isActive) {
+          doc.setFontSize(5); doc.setFont("helvetica","normal");
+          doc.text(`Niv. ${l.level}`, nx + boxW/2, by + bh - 2, { align:"center" });
+        }
+        nx += boxW + boxGap;
+      });
+      y = ny + boxH + 8;
+    }
+
     doc.setFontSize(6.5); doc.setFont("helvetica","italic"); doc.setTextColor(...gray);
     doc.text("Niveau indicatif base sur un nombre reduit d'informations, sans analyse complete du perimetre supply chain.", margin, y); y+=7;
 
@@ -701,6 +775,58 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     doc.setTextColor(255,255,255); // re-forcer blanc
     doc.text("Certifie QUALIOPI - Supply Chain Master", margin+80, y+21);
 
+    // ── Bloc interlocuteur JBF (page 5) ──────────────────────────────────────
+    y += 8;
+    if (y + 40 > 280) { doc.addPage(); y = 20; }
+    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
+    doc.text("Votre interlocuteur", margin, y); y += 7;
+
+    // Fond bleu clair
+    doc.setFillColor(...lightBlue); doc.roundedRect(margin, y, contentW, 36, 3,3,"F");
+
+    // Avatar JBF
+    doc.setFillColor(...blue); doc.circle(margin+10, y+10, 7, "F");
+    doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+    doc.text("JBF", margin+10, y+12, { align:"center" });
+
+    // Nom et titre
+    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
+    doc.text("Jean-Baptiste FLECK", margin+22, y+8);
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
+    doc.text("Fondateur - Aravis Performance - Certifie QUALIOPI", margin+22, y+14);
+
+    // Coordonnées
+    doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
+    doc.text("07 64 54 01 58", margin+22, y+22);
+    doc.text("jbfleck@aravisperformance.com", margin+22, y+28);
+    doc.text("www.aravisperformance.com", margin+100, y+22);
+    doc.text("Certifie QUALIOPI - Supply Chain Master", margin+100, y+28);
+
+    // Items expertise (2 colonnes)
+    y += 38;
+    const jbfItems = [
+      "25 ans d'experience en Supply Chain & Excellence Operationnelle",
+      "Plus de 20 audits-diagnostics en 5 ans",
+      "Auditeur certifie France Supply Chain & Supply Chain Master",
+      "Maitrise des referentiels MMOG/LE et Supply Chain Plus",
+      "Black Belt Lean 6 Sigma",
+      "CPIM - Certified in Planning and Inventory Management",
+    ];
+    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
+    jbfItems.forEach((item, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const ix = col === 0 ? margin : margin + contentW/2 + 4;
+      const iy = y + row * 8;
+      if (iy + 6 > 285) return;
+      doc.setFillColor(...hexToRgb(MATURITY_LEVELS[Math.min(i,5)].color));
+      doc.circle(ix + 1.5, iy + 0.5, 1.5, "F");
+      doc.setTextColor(...dark);
+      const txt = doc.splitTextToSize(item, contentW/2 - 8);
+      doc.text(txt[0], ix + 5, iy + 2);
+    });
+    y += Math.ceil(jbfItems.length / 2) * 8 + 4;
+
     const pageCount = doc.internal.getNumberOfPages();
     for (let i=1; i<=pageCount; i++) {
       doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148,163,184);
@@ -857,6 +983,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
             Niveau {avgScore}/5 — {level.label}
           </div>
           <p style={{ color:"#64748b",fontSize:14,margin:"0 0 16px",lineHeight:1.7 }}>{level.detail}</p>
+          <NutriScore avgScore={avgScore} />
           <div style={{ background:"#eff6ff",borderRadius:8,padding:"10px 16px",fontSize:13,color:C1,marginTop:4,display:"inline-flex",alignItems:"center",gap:8 }}>
             💡 <strong>Ce rapport est exportable en PDF</strong> — bouton rouge en bas de cette page.
           </div>
