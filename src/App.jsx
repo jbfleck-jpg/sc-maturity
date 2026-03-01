@@ -540,7 +540,8 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       doc.setTextColor(isCur?255:30, isCur?255:30, isCur?255:30);
       // Level label — clip to avoid overflow
       const labelText = `${l.level} - ${l.label}`;
-      doc.text(labelText, margin+11, y+5);
+      const labelLines = doc.splitTextToSize(labelText, isCur ? contentW-50 : contentW-20);
+      doc.text(labelLines[0], margin+11, y+5);
       if (isCur) {
         doc.setFontSize(7); doc.setTextColor(255,255,255);
         doc.text("<-- VOTRE NIVEAU", margin+contentW-36, y+5);
@@ -551,7 +552,8 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       const kwY = y+10+detailL.length*4;
       doc.setFontSize(6); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?230:rgb[0], isCur?230:rgb[1], isCur?230:rgb[2]);
-      doc.text(kwL, margin+11, kwY);
+      const kwClipped = doc.splitTextToSize(l.keywords, contentW-14);
+      doc.text(kwClipped.slice(0,2), margin+11, kwY);
       y += bH+2;
     });
     y += 3;
@@ -636,12 +638,54 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       doc.text(lines, margin, y); y+=lines.length*4.5+7;
     });
 
+    // ── PAGE 5 : Audit Supply Chain ─────────────────────────────────────────
+    doc.addPage(); y=20;
+    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
+    doc.text("Audit Supply Chain", margin, y); y+=8;
+
+    const auditPhases = [
+      {
+        icon:"Phase terrain (1 a 5 jours par site audite)",
+        items:["Collecte des elements pour identifier le niveau de maturite et comprendre le fonctionnement actuel de la Supply Chain."],
+      },
+      {
+        icon:"Diagnostic",
+        items:[
+          "Evaluation complete du niveau de maturite.",
+          "Recherche des causes de performance et de non-performance.",
+          "Redaction d'un rapport d'audit complet de plus de 20 pages.",
+          "Construction d'une feuille de route avec 3 a 5 projets pour ameliorer la maturite de l'entreprise.",
+        ],
+      },
+      {
+        icon:"Restitution (1/2 journee)",
+        items:["Presentation des conclusions du rapport d'audit et echanges avec le CODIR."],
+      },
+    ];
+
+    auditPhases.forEach((phase, pi) => {
+      if (y+30>280) { doc.addPage(); y=20; }
+      // Phase title
+      doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+      doc.text(phase.icon, margin, y); y+=6;
+      // Items
+      doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
+      phase.items.forEach(item => {
+        const itemLines = doc.splitTextToSize("- " + item, contentW-6);
+        if (y+itemLines.length*4.5>280) { doc.addPage(); y=20; }
+        doc.text(itemLines, margin+4, y);
+        y += itemLines.length*4.5;
+      });
+      y += 6;
+    });
+
     // Contact block — always on same page, never orphaned
     if (y > 260) { doc.addPage(); y=20; }
     doc.setFillColor(...blue); doc.roundedRect(margin,y,contentW,28,3,3,"F");
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text("Jean-Baptiste FLECK - Fondateur Aravis Performance", margin+4, y+8);
-    doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(191,219,254);
+    const nameLines = doc.splitTextToSize("Jean-Baptiste FLECK - Fondateur Aravis Performance", contentW-8);
+    doc.text(nameLines, margin+4, y+7);
+    doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(255,255,255);
     doc.text("07 64 54 01 58", margin+4, y+15);
     doc.text("jbfleck@aravisperformance.com", margin+4, y+21);
     doc.text("www.aravisperformance.com", margin+80, y+15);
@@ -932,7 +976,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
         <div style={{ background:"#fff",borderRadius:16,padding:28,boxShadow:"0 4px 24px #0001",marginBottom:20 }}>
           <h2 style={{ fontSize:15,fontWeight:600,color:"#0f172a",marginBottom:16 }}>Audit Supply Chain</h2>
           {[
-            { icon:"🔍", title:"Phase terrain (1 à 10 jours)", items:["Collecte des éléments pour identifier le niveau de maturité et comprendre le fonctionnement actuel de la Supply Chain."] },
+            { icon:"🔍", title:"Phase terrain (1 à 5 jours par site audité)", items:["Collecte des éléments pour identifier le niveau de maturité et comprendre le fonctionnement actuel de la Supply Chain."] },
             { icon:"📊", title:"Diagnostic", items:["Évaluation complète du niveau de maturité.","Recherche des causes de performance et de non-performance.","Rédaction d'un rapport d'audit complet de plus de 20 pages.","Construction d'une feuille de route avec 3 à 5 projets pour améliorer la maturité de l'entreprise."] },
             { icon:"🎤", title:"Restitution (½ journée)", items:["Présentation des conclusions du rapport d'audit et échanges avec le CODIR."] },
           ].map((phase,i)=>(
