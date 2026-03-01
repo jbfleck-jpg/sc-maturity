@@ -103,7 +103,7 @@ const THEMES = [...new Set(QUESTIONS.map(q => q.theme))];
 
 const MATURITY_LEVELS = [
   { level:0, label:"Implicite",  color:"#dc2626", desc:"Aucun processus formalisé. Gestion individuelle, réactive, en silos.", detail:"La Supply Chain repose sur l'expérience individuelle et les habitudes locales. Les décisions sont prises au cas par cas, en réaction aux urgences. Les dysfonctionnements sont acceptés comme une fatalité.", keywords:"Non formalisé · Réactif · Silos · Absence de stratégie" },
-  { level:1, label:"Formalisée", color:"#ea580c", desc:"Processus documentés par fonction, mais cloisonnés.", detail:"Les processus commencent à être formalisés par fonction (achats, production, logistique) par nécessité. La documentation existe mais reste cloisonnée. Les KPIs locaux sont suivis sans analyse globale.", keywords:"Processus documentés · Silos persistants · KPIs locaux · Réactivité" },
+  { level:1, label:"Réactif",    color:"#ea580c", desc:"Processus documentés par fonction, mais cloisonnés.", detail:"Les processus commencent à être formalisés par fonction (achats, production, logistique) par nécessité. La documentation existe mais reste cloisonnée. Les KPIs locaux sont suivis sans analyse globale.", keywords:"Processus documentés · Silos persistants · KPIs locaux · Réactivité" },
   { level:2, label:"Maîtrisée",  color:"#d97706", desc:"Processus alignés sur la stratégie globale, début de collaboration.", detail:"Tous les processus sont formalisés et alignés sur une stratégie globale. L'entreprise cherche à stabiliser ses opérations. Un responsable SC est nommé. Les silos commencent à s'atténuer.", keywords:"Processus alignés · KPIs transverses · Stabilisation · Outils centralisés" },
   { level:3, label:"Intégrée",   color:"#65a30d", desc:"Vision globale, S&OP déployé, collaboration systématique.", detail:"Toutes les fonctions SC travaillent ensemble. Un S&OP synchronise demande et offre. La collaboration est systématique en interne et avec les partenaires. Les outils ERP/WMS/TMS sont intégrés.", keywords:"Collaboration systématique · S&OP · Vision globale · Intégration des outils" },
   { level:4, label:"Améliorée",  color:"#16a34a", desc:"Amélioration continue, décisions data-driven, centre d'excellence.", detail:"L'entreprise intègre l'amélioration continue dans sa culture SC. Les processus sont optimisés via Lean, Six Sigma, DDMRP. Les décisions sont data-driven. Un centre d'excellence SC capitalise les bonnes pratiques.", keywords:"Amélioration continue · Data-driven · Lean/Six Sigma · Centre d'excellence" },
@@ -217,18 +217,19 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
   const barAreaW = chartW - labelW - scoreW - 6;
   const totalH = barData.length * (barH + gap);
 
-  // FIX 2a: Clip average line label so it never overflows
+  // Ligne de moyenne verticale
   const avgX = startX + labelW + (barAreaW * avgScore / 5);
   doc.setDrawColor(220,38,38); doc.setLineWidth(0.8);
   doc.setLineDashPattern([2,2], 0);
   doc.line(avgX, startY-14, avgX, startY+totalH);
   doc.setLineDashPattern([], 0);
 
-  // Position label so it never clips right margin
-  const rightLimit = startX + chartW - 2;
-  const labelX = Math.min(avgX, rightLimit - 18);
+  // Label "Moy." TOUJOURS à droite du trait (jamais chevauchant les barres)
+  const maxLabelRight = startX + chartW - 2;
+  const labelRight = avgX + 2; // coller à droite du trait
+  const safeLabel = Math.min(labelRight, maxLabelRight - 14);
   doc.setFontSize(7); doc.setTextColor(220,38,38); doc.setFont("helvetica","bold");
-  doc.text(`Moy. ${avgScore}`, labelX, startY-16, { align:"center" });
+  doc.text(`Moy. ${avgScore}`, safeLabel, startY-16, { align:"left" });
   doc.setFont("helvetica","normal");
 
   barData.forEach((item, i) => {
@@ -505,33 +506,47 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     MATURITY_LEVELS.forEach(l => {
       const rgb = hexToRgb(l.color);
       const isCur = Math.floor(avgScore)===l.level;
-      const detailFull = doc.splitTextToSize(l.detail, contentW-16);
-      const detailL = detailFull.slice(0,2);
-      const kwL = doc.splitTextToSize(l.keywords, contentW-16);
-      const bH = Math.max(14, 6 + detailL.length*4 + kwL.length*3.5 + 2);
+
+      // Calcul précis : on prépare toutes les lignes AVANT de dessiner la boîte
+      doc.setFontSize(7); doc.setFont("helvetica","normal");
+      const detailLines = doc.splitTextToSize(l.detail, contentW-18).slice(0,3);
+      doc.setFontSize(6); doc.setFont("helvetica","bold");
+      const kwLines = doc.splitTextToSize(l.keywords, contentW-18).slice(0,2);
+
+      // Hauteur réelle : titre(5) + detail(4/ligne) + kw(3.5/ligne) + padding(6)
+      const bH = Math.max(16, 6 + detailLines.length*4.2 + kwLines.length*3.8 + 4);
+
       if (y+bH>285) { doc.addPage(); y=20; }
-      if (isCur) { doc.setFillColor(...rgb); }
-      else { doc.setFillColor(248,250,252); }
+
+      // Fond
+      doc.setFillColor(isCur ? rgb[0] : 248, isCur ? rgb[1] : 250, isCur ? rgb[2] : 252);
       doc.roundedRect(margin, y, contentW, bH, 2,2,"F");
+
+      // Pastille couleur
       doc.setFillColor(...rgb); doc.circle(margin+4.5, y+bH/2, 3,"F");
+
+      // Titre niveau
       doc.setFontSize(8); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?255:30, isCur?255:30, isCur?255:30);
-      const labelText = `${l.level} - ${l.label}`;
-      const labelLines = doc.splitTextToSize(labelText, isCur ? contentW-50 : contentW-20);
-      doc.text(labelLines[0], margin+11, y+5);
+      doc.text(`${l.level} - ${l.label}`, margin+11, y+5.5);
+
       if (isCur) {
         doc.setFontSize(7); doc.setTextColor(255,255,255);
-        doc.text("<-- VOTRE NIVEAU", margin+contentW-36, y+5);
+        doc.text("<-- VOTRE NIVEAU", margin+contentW-36, y+5.5);
       }
+
+      // Texte détail
       doc.setFontSize(7); doc.setFont("helvetica","normal");
-      doc.setTextColor(isCur?245:70, isCur?245:70, isCur?245:70);
-      doc.text(detailL, margin+11, y+10);
-      const kwY = y+10+detailL.length*4;
+      doc.setTextColor(isCur?240:60, isCur?240:60, isCur?240:60);
+      doc.text(detailLines, margin+11, y+11);
+
+      // Mots-clés
+      const kwY = y + 11 + detailLines.length * 4.2;
       doc.setFontSize(6); doc.setFont("helvetica","bold");
-      doc.setTextColor(isCur?230:rgb[0], isCur?230:rgb[1], isCur?230:rgb[2]);
-      const kwClipped = doc.splitTextToSize(l.keywords, contentW-14);
-      doc.text(kwClipped.slice(0,2), margin+11, kwY);
-      y += bH+2;
+      doc.setTextColor(isCur?220:rgb[0], isCur?220:rgb[1], isCur?220:rgb[2]);
+      doc.text(kwLines, margin+11, kwY);
+
+      y += bH + 2;
     });
     y += 3;
 
@@ -913,7 +928,14 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
                 {barData.map((entry,i)=><Cell key={i} fill={getLevel(entry.score).color}/>)}
               </Bar>
               <ReferenceLine x={avgScore} stroke="#dc2626" strokeDasharray="5 3" strokeWidth={2}
-                label={{ value:`Moy. ${avgScore}`, position:"insideTopRight", fontSize:11, fill:"#dc2626", fontWeight:700, offset:6 }}/>
+                label={({ viewBox }) => {
+                  const { x, y } = viewBox;
+                  return (
+                    <text x={x + 6} y={22} fill="#dc2626" fontSize={11} fontWeight={700}>
+                      {`Moy. ${avgScore}`}
+                    </text>
+                  );
+                }}/>
             </BarChart>
           </ResponsiveContainer>
           <div style={{ display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",marginTop:16 }}>
@@ -966,9 +988,9 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
 
         {/* Audit Supply Chain */}
         <div style={{ background:"#fff",borderRadius:16,padding:28,boxShadow:"0 4px 24px #0001",marginBottom:20 }}>
-          <h2 style={{ fontSize:15,fontWeight:600,color:"#0f172a",marginBottom:16 }}>Audit Supply Chain</h2>
+          <h2 style={{ fontSize:15,fontWeight:600,color:"#0f172a",marginBottom:16 }}>L'audit - Diagnostic Supply Chain en quelques mots</h2>
           {[
-            { icon:"🔍", title:"Phase terrain (1 à 5 jours par site audité)", items:["Collecte des éléments pour identifier le niveau de maturité et comprendre le fonctionnement actuel de la Supply Chain."] },
+            { icon:"🔍", title:"Audit : Phase terrain (1 à 5 jours par site audité)", items:["Collecte des éléments pour identifier le niveau de maturité et comprendre le fonctionnement actuel de la Supply Chain."] },
             { icon:"📊", title:"Diagnostic", items:["Évaluation complète du niveau de maturité.","Recherche des causes de performance et de non-performance.","Rédaction d'un rapport d'audit complet de plus de 20 pages.","Construction d'une feuille de route avec 3 à 5 projets pour améliorer la maturité de l'entreprise."] },
             { icon:"🎤", title:"Restitution (½ journée)", items:["Présentation des conclusions du rapport d'audit et échanges avec le CODIR."] },
           ].map((phase,i)=>(
@@ -985,33 +1007,6 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
             </div>
           ))}
         </div>
-
-        {/* Profil JBF */}
-        <div style={{ background:"#fff",borderRadius:16,padding:28,boxShadow:"0 4px 24px #0001",marginBottom:20 }}>
-          <h2 style={{ fontSize:15,fontWeight:600,color:"#0f172a",marginBottom:18 }}>Votre interlocuteur</h2>
-          <div style={{ display:"flex",alignItems:"center",gap:16,marginBottom:20,padding:"14px 18px",background:"#eff6ff",borderRadius:10 }}>
-            <div style={{ width:52,height:52,background:C1,borderRadius:99,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
-              <span style={{ color:"#fff",fontWeight:800,fontSize:15 }}>JBF</span>
-            </div>
-            <div>
-              <div style={{ fontWeight:700,fontSize:16,color:"#0f172a" }}>Jean-Baptiste FLECK</div>
-              <div style={{ fontSize:12,color:"#64748b" }}>Fondateur — Aravis Performance · Certifié QUALIOPI</div>
-            </div>
-          </div>
-          {[
-            {icon:"⭐",text:"25 années d'expérience en Supply Chain & Excellence Opérationnelle"},
-            {icon:"🔍",text:"Plus de 20 audits-diagnostics menés au cours des 5 dernières années"},
-            {icon:"🏅",text:"Auditeur certifié France Supply Chain & Supply Chain Master"},
-            {icon:"📋",text:"Maîtrise des référentiels MMOG/LE et Supply Chain Plus"},
-            {icon:"🥋",text:"Black Belt Lean 6 Sigma"},
-            {icon:"🎓",text:"CPIM — Certified in Planning and Inventory Management"},
-          ].map((item,i)=>(
-            <div key={i} style={{ display:"flex",gap:12,alignItems:"flex-start",padding:"11px 14px",background:i%2===0?"#f8fafc":"#fff",borderRadius:8,fontSize:14,color:"#1e293b",lineHeight:1.5,marginBottom:6,border:"1px solid #e2e8f0" }}>
-              <span style={{ fontSize:18,flexShrink:0 }}>{item.icon}</span><span>{item.text}</span>
-            </div>
-          ))}
-        </div>
-
         {/* Contact */}
         <div style={{ background:C1,borderRadius:16,padding:28,marginBottom:20 }}>
           <h2 style={{ fontSize:15,fontWeight:600,color:"#fff",marginBottom:8 }}>Envie d'aller plus loin ?</h2>
@@ -1074,6 +1069,33 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           {contactPref.phone&&!phoneNumber&&<p style={{ fontSize:12,color:"#94a3b8",textAlign:"center",marginTop:8 }}>Merci de saisir votre numéro de téléphone.</p>}
           {loading&&<p style={{ fontSize:12,color:"#64748b",textAlign:"center",marginTop:8 }}>⏳ Analyse en cours de génération, veuillez patienter…</p>}
         </div>
+
+        {/* Profil JBF */}
+        <div style={{ background:"#fff",borderRadius:16,padding:28,boxShadow:"0 4px 24px #0001",marginBottom:20 }}>
+          <h2 style={{ fontSize:15,fontWeight:600,color:"#0f172a",marginBottom:18 }}>Votre interlocuteur</h2>
+          <div style={{ display:"flex",alignItems:"center",gap:16,marginBottom:20,padding:"14px 18px",background:"#eff6ff",borderRadius:10 }}>
+            <div style={{ width:52,height:52,background:C1,borderRadius:99,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+              <span style={{ color:"#fff",fontWeight:800,fontSize:15 }}>JBF</span>
+            </div>
+            <div>
+              <div style={{ fontWeight:700,fontSize:16,color:"#0f172a" }}>Jean-Baptiste FLECK</div>
+              <div style={{ fontSize:12,color:"#64748b" }}>Fondateur — Aravis Performance · Certifié QUALIOPI</div>
+            </div>
+          </div>
+          {[
+            {icon:"⭐",text:"25 années d'expérience en Supply Chain & Excellence Opérationnelle"},
+            {icon:"🔍",text:"Plus de 20 audits-diagnostics menés au cours des 5 dernières années"},
+            {icon:"🏅",text:"Auditeur certifié France Supply Chain & Supply Chain Master"},
+            {icon:"📋",text:"Maîtrise des référentiels MMOG/LE et Supply Chain Plus"},
+            {icon:"🥋",text:"Black Belt Lean 6 Sigma"},
+            {icon:"🎓",text:"CPIM — Certified in Planning and Inventory Management"},
+          ].map((item,i)=>(
+            <div key={i} style={{ display:"flex",gap:12,alignItems:"flex-start",padding:"11px 14px",background:i%2===0?"#f8fafc":"#fff",borderRadius:8,fontSize:14,color:"#1e293b",lineHeight:1.5,marginBottom:6,border:"1px solid #e2e8f0" }}>
+              <span style={{ fontSize:18,flexShrink:0 }}>{item.icon}</span><span>{item.text}</span>
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   );
