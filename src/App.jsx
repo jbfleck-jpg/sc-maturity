@@ -466,56 +466,58 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     const pageW=210; const margin=20; const contentW=pageW-margin*2;
 
     // ── PAGE 1 ──────────────────────────────────────────────────────────────
-    doc.setFillColor(...blue); doc.rect(0,0,pageW,42,"F");
-    // Title — no accents to avoid font issues
-    doc.setFontSize(16); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text("Aravis Performance", margin, 11);
-    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+    // Compact header — 28mm only
+    doc.setFillColor(...blue); doc.rect(0,0,pageW,28,"F");
+    // "Aravis Performance" — white, bold
+    doc.setFontSize(14); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+    doc.text("Aravis Performance", margin, 9);
+    // Report title — white, slightly smaller
+    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
     const rTitle = `Rapport de maturite simplifie de la supply chain de : ${form.entreprise}`;
     const rTitleLines = doc.splitTextToSize(rTitle, contentW);
-    doc.text(rTitleLines, margin, 20);
-    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(191,219,254);
-    doc.text("07 64 54 01 58  |  jbfleck@aravisperformance.com  |  www.aravisperformance.com", margin, 38);
+    doc.text(rTitleLines, margin, 17);
+    // Contact line — light blue, at bottom of header
+    doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(191,219,254);
+    doc.text("07 64 54 01 58  |  jbfleck@aravisperformance.com  |  www.aravisperformance.com", margin, 25);
 
-    let y = 50;
+    let y = 34;
 
-    // Remerciement
-    doc.setFillColor(...lightBlue); doc.roundedRect(margin, y, contentW, 13, 2,2,"F");
-    doc.setFontSize(8); doc.setFont("helvetica","italic"); doc.setTextColor(...blue);
-    const thankMsg = "Merci d'avoir teste cet outil d'auto-evaluation. Il vous permet de vous engager dans une demarche d'amelioration de la performance de votre supply chain.";
-    const thankLines = doc.splitTextToSize(thankMsg, contentW-8);
-    thankLines.forEach((l,i) => doc.text(l, margin+4, y+5+i*4));
-    y += Math.max(17, thankLines.length*4+9);
-
-    // Identite
-    doc.setFillColor(...lightBlue); doc.roundedRect(margin,y,contentW,20,3,3,"F");
-    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
-    doc.text(`${form.prenom} ${form.nom}`, margin+4, y+7);
-    doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...gray);
-    doc.text(`${form.entreprise}  -  ${form.email}`, margin+4, y+13);
-    doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, margin+4, y+19);
-    y += 26;
-
-    // Score global
+    // ── Identite + Score sur la meme ligne ─────────────────────────────────
     const lvlRgb = hexToRgb(level.color);
-    doc.setFillColor(...blue); doc.roundedRect(margin,y,contentW/2-3,22,3,3,"F");
-    doc.setFontSize(22); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text(`${avgScore}/5`, margin+5, y+14);
-    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(191,219,254);
-    doc.text("Score global", margin+5, y+20);
-    doc.setFillColor(...lvlRgb); doc.roundedRect(margin+contentW/2+3,y,contentW/2-3,22,3,3,"F");
-    doc.setFontSize(14); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text(level.label, margin+contentW/2+7, y+13);
-    doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(240,240,240);
-    const descL = doc.splitTextToSize(level.desc, contentW/2-12);
-    doc.text(descL, margin+contentW/2+7, y+19);
-    y += 28;
+    const idW = contentW * 0.52;
+    const scoreW_block = contentW * 0.22;
+    const levelW_block = contentW * 0.22;
+    const gap = (contentW - idW - scoreW_block - levelW_block) / 2;
+    const rowH = 22;
 
-    // Note PDF export — just below score
-    doc.setFontSize(7.5); doc.setFont("helvetica","italic"); doc.setTextColor(...blue);
-    doc.text("Ce rapport est exportable en PDF via le bouton de telechargement en bas de la page.", margin, y); y+=5;
-    doc.setFontSize(7); doc.setFont("helvetica","italic"); doc.setTextColor(...gray);
-    doc.text("Niveau indicatif base sur un nombre reduit d'informations, sans analyse complete du perimetre supply chain.", margin, y); y+=8;
+    // Identite block (left)
+    doc.setFillColor(...lightBlue); doc.roundedRect(margin, y, idW, rowH, 2,2,"F");
+    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
+    doc.text(`${form.prenom} ${form.nom}`, margin+4, y+6);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
+    const entEmail = doc.splitTextToSize(`${form.entreprise} - ${form.email}`, idW-8);
+    entEmail.forEach((l,i) => doc.text(l, margin+4, y+12+i*4));
+    doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, margin+4, y+rowH-3);
+
+    // Score block (middle)
+    const sx = margin + idW + gap;
+    doc.setFillColor(...blue); doc.roundedRect(sx, y, scoreW_block, rowH, 2,2,"F");
+    doc.setFontSize(16); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+    doc.text(`${avgScore}/5`, sx + scoreW_block/2, y+12, { align:"center" });
+    doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(191,219,254);
+    doc.text("Score global", sx + scoreW_block/2, y+18, { align:"center" });
+
+    // Level block (right) — color of level, label only (no desc to avoid overflow)
+    const lx = sx + scoreW_block + gap;
+    doc.setFillColor(...lvlRgb); doc.roundedRect(lx, y, levelW_block, rowH, 2,2,"F");
+    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+    doc.text(level.label, lx + levelW_block/2, y+13, { align:"center" });
+
+    y += rowH + 5;
+
+    // Disclaimer line
+    doc.setFontSize(6.5); doc.setFont("helvetica","italic"); doc.setTextColor(...gray);
+    doc.text("Niveau indicatif base sur un nombre reduit d'informations, sans analyse complete du perimetre supply chain.", margin, y); y+=7;
 
     // Niveaux de maturite
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
@@ -524,32 +526,35 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     MATURITY_LEVELS.forEach(l => {
       const rgb = hexToRgb(l.color);
       const isCur = Math.round(avgScore)===l.level;
-      const detailL = doc.splitTextToSize(l.detail, contentW-16);
+      // Clip detail text to avoid overflow: max 2 lines
+      const detailFull = doc.splitTextToSize(l.detail, contentW-16);
+      const detailL = detailFull.slice(0,2); // max 2 lines
       const kwL = doc.splitTextToSize(l.keywords, contentW-16);
-      const bH = Math.max(17, 7+detailL.length*4.2+kwL.length*3.8+3);
+      const bH = Math.max(14, 6 + detailL.length*4 + kwL.length*3.5 + 2);
       if (y+bH>285) { doc.addPage(); y=20; }
       if (isCur) { doc.setFillColor(...rgb); }
       else { doc.setFillColor(248,250,252); }
       doc.roundedRect(margin, y, contentW, bH, 2,2,"F");
-      doc.setFillColor(...rgb); doc.circle(margin+5, y+bH/2, 3.5,"F");
-      doc.setFontSize(8.5); doc.setFont("helvetica","bold");
+      doc.setFillColor(...rgb); doc.circle(margin+4.5, y+bH/2, 3,"F");
+      doc.setFontSize(8); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?255:30, isCur?255:30, isCur?255:30);
-      doc.text(`${l.level} - ${l.label}`, margin+12, y+5.5);
-      if (isCur) { doc.setFontSize(7.5); doc.setTextColor(255,255,255); doc.text("<-- VOTRE NIVEAU", margin+contentW-37, y+5.5); }
-      doc.setFontSize(7.5); doc.setFont("helvetica","normal");
+      // Level label — clip to avoid overflow
+      const labelText = `${l.level} - ${l.label}`;
+      doc.text(labelText, margin+11, y+5);
+      if (isCur) {
+        doc.setFontSize(7); doc.setTextColor(255,255,255);
+        doc.text("<-- VOTRE NIVEAU", margin+contentW-36, y+5);
+      }
+      doc.setFontSize(7); doc.setFont("helvetica","normal");
       doc.setTextColor(isCur?245:70, isCur?245:70, isCur?245:70);
-      doc.text(detailL, margin+12, y+11);
-      const kwY = y+11+detailL.length*4.2;
-      doc.setFontSize(6.5); doc.setFont("helvetica","bold");
+      doc.text(detailL, margin+11, y+10);
+      const kwY = y+10+detailL.length*4;
+      doc.setFontSize(6); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?230:rgb[0], isCur?230:rgb[1], isCur?230:rgb[2]);
-      doc.text(kwL, margin+12, kwY);
-      y += bH+3;
+      doc.text(kwL, margin+11, kwY);
+      y += bH+2;
     });
-
-    // PDF export note repeated after niveaux
-    if (y+8>285) { doc.addPage(); y=20; }
-    doc.setFontSize(7.5); doc.setFont("helvetica","italic"); doc.setTextColor(...blue);
-    doc.text("Ce rapport complet est exportable en PDF - bouton de telechargement en bas de la page.", margin, y+3); y+=10;
+    y += 3;
 
     // ── PAGE 2 : Scores + Radar + Barchart ──────────────────────────────────
     doc.addPage(); y=20;
@@ -608,12 +613,23 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       { title:"PROCHAINES ETAPES",        color:[13,148,136], text:aiSections?.nextSteps||"" },
     ];
 
+    const sectionLabels = {
+      "VOTRE NIVEAU DE MATURITE": "Votre niveau de maturite",
+      "POINTS FORTS":             "Points forts",
+      "POINTS D'AMELIORATION":    "Points d'amelioration",
+      "RECOMMANDATIONS":          "Recommandations",
+      "PROCHAINES ETAPES":        "Prochaines etapes",
+    };
     sectionDefs.forEach(({ title, color, text }) => {
       if (!text) return;
       const clean = cleanSectionText(text, title.replace(/\s+/g,"\\s+"));
+      if (!clean) return;
+      const displayTitle = sectionLabels[title] || title;
       if (y+22>280) { doc.addPage(); y=20; }
+      // Draw colored left bar + title
+      doc.setFillColor(...color); doc.rect(margin, y, 3, 5, "F");
       doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...color);
-      doc.text(title, margin, y); y+=6;
+      doc.text(displayTitle, margin+6, y+4.5); y+=8;
       doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
       const lines = doc.splitTextToSize(clean, contentW);
       if (y+lines.length*4.5>280) { doc.addPage(); y=20; }
