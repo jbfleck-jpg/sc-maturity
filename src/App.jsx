@@ -43,9 +43,7 @@ const parseAiSections = (text) => {
     { key: "recommendations", patterns: ["RECOMMANDATIONS"] },
     { key: "nextSteps",       patterns: ["PROCHAINES ETAPES", "PROCHAINES ÉTAPES"] },
   ];
-  // Split text into lines
   const lines = text.split("\n");
-  // Find where each section starts (line index of its title)
   const sectionStarts = [];
   lines.forEach((line, idx) => {
     const trimmed = line.trim().toUpperCase();
@@ -56,7 +54,6 @@ const parseAiSections = (text) => {
     });
   });
   if (sectionStarts.length === 0) {
-    // Fallback: split by double newlines
     const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
     return {
       maturityLevel: paras[0] || "",
@@ -66,7 +63,6 @@ const parseAiSections = (text) => {
       nextSteps: paras[4] || "",
     };
   }
-  // Extract content between section titles (skip the title line itself)
   const result = { maturityLevel:"", strengths:"", improvements:"", recommendations:"", nextSteps:"" };
   sectionStarts.forEach(({ key, idx }, i) => {
     const endIdx = i + 1 < sectionStarts.length ? sectionStarts[i+1].idx : lines.length;
@@ -76,7 +72,6 @@ const parseAiSections = (text) => {
   return result;
 };
 
-// Strip the ALL-CAPS section title from start of paragraph text
 const cleanSectionText = (text, ...patterns) => {
   let t = text;
   patterns.forEach(p => { t = t.replace(new RegExp(`^${p}\\s*`, "i"), ""); });
@@ -115,7 +110,8 @@ const MATURITY_LEVELS = [
   { level:5, label:"Optimisée",  color:"#0d9488", desc:"Centre de profit différenciant, IA/IoT, visibilité end-to-end.", detail:"La SC est perçue comme un centre de profit différenciant. Les technologies avancées (IA, IoT, blockchain) sont intégrées. Les processus sont auto-optimisés. Les services logistiques sont monétisés.", keywords:"Centre de profit · IA/IoT/Blockchain · Visibilité end-to-end · Monétisation" },
 ];
 
-const getLevel = (s) => MATURITY_LEVELS.find(l => l.level === Math.min(Math.round(s), 5)) || MATURITY_LEVELS[0];
+// FIX 1: getLevel utilise Math.floor — ne pas modifier
+const getLevel = (s) => MATURITY_LEVELS.find(l => l.level === Math.min(Math.floor(s), 5)) || MATURITY_LEVELS[0];
 
 // ── Shared styles ────────────────────────────────────────────────────────────
 const card = { background:"#fff", borderRadius:16, padding:40, boxShadow:"0 4px 24px #0001", maxWidth:680, width:"100%", margin:"0 auto" };
@@ -138,7 +134,6 @@ const ProgressBar = ({ pct }) => (
   </div>
 );
 
-// Colored bar left + bold title for AI sections
 const SectionBlock = ({ title, color, bg, children }) => (
   <div style={{ marginBottom:18, padding:"16px 18px", background:bg, borderRadius:10, borderLeft:`4px solid ${color}` }}>
     <div style={{ fontWeight:700, fontSize:14, color, marginBottom:8 }}>{title}</div>
@@ -152,7 +147,6 @@ const drawRadarPDF = (doc, cx, cy, radius, themeScores, avgScore) => {
   const step = (2 * Math.PI) / n;
   const lvlColor = hexToRgb(getLevel(avgScore).color);
 
-  // Filled average-level polygon (blended with white to simulate 40% opacity)
   const avgPts = themeScores.map((_, i) => {
     const a = i * step - Math.PI / 2;
     const r = radius * avgScore / 5;
@@ -169,7 +163,6 @@ const drawRadarPDF = (doc, cx, cy, radius, themeScores, avgScore) => {
     doc.lines(lines, avgPts[0][0], avgPts[0][1], [1,1], "FD");
   }
 
-  // Grid rings
   for (let ring = 1; ring <= 5; ring++) {
     const pts = themeScores.map((_, i) => {
       const a = i * step - Math.PI / 2;
@@ -180,13 +173,11 @@ const drawRadarPDF = (doc, cx, cy, radius, themeScores, avgScore) => {
     doc.setFontSize(6); doc.setTextColor(160,160,160);
     doc.text(`${ring}`, cx+1, cy - radius*ring/5 + 2);
   }
-  // Axes
   themeScores.forEach((_, i) => {
     const a = i * step - Math.PI / 2;
     doc.setDrawColor(200,200,200); doc.setLineWidth(0.2);
     doc.line(cx, cy, cx+radius*Math.cos(a), cy+radius*Math.sin(a));
   });
-  // Score polygon
   const pts = themeScores.map((d, i) => {
     const a = i * step - Math.PI / 2;
     return [cx+(radius*d.score/5)*Math.cos(a), cy+(radius*d.score/5)*Math.sin(a)];
@@ -195,13 +186,11 @@ const drawRadarPDF = (doc, cx, cy, radius, themeScores, avgScore) => {
   for (let i=0; i<pts.length; i++) doc.line(pts[i][0], pts[i][1], pts[(i+1)%pts.length][0], pts[(i+1)%pts.length][1]);
   pts.forEach(([x,y]) => { doc.setFillColor(12,47,114); doc.circle(x, y, 1.2, "F"); });
 
-  // Average label in center
   doc.setFontSize(8); doc.setFont("helvetica","bold");
   doc.setTextColor(lvlColor[0], lvlColor[1], lvlColor[2]);
   doc.text(`Moy. ${avgScore}/5`, cx, cy+3, { align:"center" });
   doc.setFont("helvetica","normal");
 
-  // Full-name labels around radar
   doc.setFontSize(7.5); doc.setTextColor(30,30,30); doc.setFont("helvetica","bold");
   themeScores.forEach((d, i) => {
     const a = i * step - Math.PI / 2;
@@ -228,16 +217,18 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
   const barAreaW = chartW - labelW - scoreW - 6;
   const totalH = barData.length * (barH + gap);
 
-  // Average dashed line — positioned with enough room for label on left
-  // Calculate x position
+  // FIX 2a: Clip average line label so it never overflows
   const avgX = startX + labelW + (barAreaW * avgScore / 5);
   doc.setDrawColor(220,38,38); doc.setLineWidth(0.8);
   doc.setLineDashPattern([2,2], 0);
   doc.line(avgX, startY-14, avgX, startY+totalH);
   doc.setLineDashPattern([], 0);
-  // Label above, anchored to center of line, shifted left so it never clips right margin
+
+  // Position label so it never clips right margin
+  const rightLimit = startX + chartW - 2;
+  const labelX = Math.min(avgX, rightLimit - 18);
   doc.setFontSize(7); doc.setTextColor(220,38,38); doc.setFont("helvetica","bold");
-  doc.text(`Moy. ${avgScore}`, avgX, startY-16, { align:"center" });
+  doc.text(`Moy. ${avgScore}`, labelX, startY-16, { align:"center" });
   doc.setFont("helvetica","normal");
 
   barData.forEach((item, i) => {
@@ -337,14 +328,12 @@ export default function App() {
   const generateComment = async () => {
     setLoading(true);
 
-    // Sort themes by score for targeted sections
     const sortedByScore = THEMES.map(t => ({ t, s: themeScore(t) })).sort((a,b) => b.s - a.s);
     const top3 = sortedByScore.slice(0, 3).map(x => `${x.t} : ${x.s}/5`).join(", ");
     const bottom3 = [...sortedByScore].slice(-3).reverse().map(x => `${x.t} : ${x.s}/5`).join(", ");
     const ctx = THEMES.map(t=>`${t} : ${themeScore(t)}/5`).join(", ");
 
-    // Proximity to next maturity level
-    const nextLevel = Math.min(Math.ceil(avgScore + 0.01), 5);
+    const nextLevel = Math.min(Math.floor(avgScore) + 1, 5);
     const distToNext = Math.round((nextLevel - avgScore) * 100) / 100;
     let proximityInstruction = "";
     if (distToNext <= 0.1) {
@@ -359,7 +348,7 @@ export default function App() {
 
 Un dirigeant de PME industrielle vient de realiser une auto-evaluation de la maturite de sa supply chain.
 Tous les resultats par thematique : ${ctx}
-Score global : ${avgScore}/5 - Niveau actuel : ${level.label} (niveau ${Math.round(avgScore)}) - ${level.desc}
+Score global : ${avgScore}/5 - Niveau actuel : ${level.label} (niveau ${Math.floor(avgScore)}) - ${level.desc}
 
 Redige une analyse en EXACTEMENT 5 paragraphes separes chacun par UNE LIGNE VIDE.
 REGLES ABSOLUES :
@@ -441,7 +430,6 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       entreprise:form.entreprise, email:form.email, score_global:avgScore, niveau:level.label,
       recontact_non:contactPref.none?"Oui":"Non",
       recontact_tel:contactPref.phone?"Oui":"Non",
-      // FIX: always include telephone field
       telephone:phoneNumber||"",
       recontact_email:contactPref.email?"Oui":"Non",
       ...Object.fromEntries(QUESTIONS.flatMap((q,i) => {
@@ -466,31 +454,26 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     const pageW=210; const margin=20; const contentW=pageW-margin*2;
 
     // ── PAGE 1 ──────────────────────────────────────────────────────────────
-    // Compact header — 28mm only
     doc.setFillColor(...blue); doc.rect(0,0,pageW,28,"F");
-    // "Aravis Performance" — white, bold
     doc.setFontSize(14); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
     doc.text("Aravis Performance", margin, 9);
-    // Report title — white, slightly smaller
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
     const rTitle = `Rapport de maturite simplifie de la supply chain de : ${form.entreprise}`;
     const rTitleLines = doc.splitTextToSize(rTitle, contentW);
     doc.text(rTitleLines, margin, 17);
-    // Contact line — light blue, at bottom of header
+    // FIX 3: coordonnées en blanc — forcer setTextColor avant chaque ligne
     doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(191,219,254);
     doc.text("07 64 54 01 58  |  jbfleck@aravisperformance.com  |  www.aravisperformance.com", margin, 25);
 
     let y = 34;
 
-    // ── Identite + Score sur la meme ligne ─────────────────────────────────
     const lvlRgb = hexToRgb(level.color);
     const idW = contentW * 0.52;
-    const scoreW_block = contentW * 0.22;
-    const levelW_block = contentW * 0.22;
-    const gap = (contentW - idW - scoreW_block - levelW_block) / 2;
+    const scoreBlockW = contentW * 0.22;
+    const levelBlockW = contentW * 0.22;
+    const gap = (contentW - idW - scoreBlockW - levelBlockW) / 2;
     const rowH = 22;
 
-    // Identite block (left)
     doc.setFillColor(...lightBlue); doc.roundedRect(margin, y, idW, rowH, 2,2,"F");
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
     doc.text(`${form.prenom} ${form.nom}`, margin+4, y+6);
@@ -499,36 +482,31 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     entEmail.forEach((l,i) => doc.text(l, margin+4, y+12+i*4));
     doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, margin+4, y+rowH-3);
 
-    // Score block (middle)
     const sx = margin + idW + gap;
-    doc.setFillColor(...blue); doc.roundedRect(sx, y, scoreW_block, rowH, 2,2,"F");
+    doc.setFillColor(...blue); doc.roundedRect(sx, y, scoreBlockW, rowH, 2,2,"F");
     doc.setFontSize(16); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text(`${avgScore}/5`, sx + scoreW_block/2, y+12, { align:"center" });
+    doc.text(`${avgScore}/5`, sx + scoreBlockW/2, y+12, { align:"center" });
     doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(191,219,254);
-    doc.text("Score global", sx + scoreW_block/2, y+18, { align:"center" });
+    doc.text("Score global", sx + scoreBlockW/2, y+18, { align:"center" });
 
-    // Level block (right) — color of level, label only (no desc to avoid overflow)
-    const lx = sx + scoreW_block + gap;
-    doc.setFillColor(...lvlRgb); doc.roundedRect(lx, y, levelW_block, rowH, 2,2,"F");
+    const lx = sx + scoreBlockW + gap;
+    doc.setFillColor(...lvlRgb); doc.roundedRect(lx, y, levelBlockW, rowH, 2,2,"F");
     doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text(level.label, lx + levelW_block/2, y+13, { align:"center" });
+    doc.text(level.label, lx + levelBlockW/2, y+13, { align:"center" });
 
     y += rowH + 5;
 
-    // Disclaimer line
     doc.setFontSize(6.5); doc.setFont("helvetica","italic"); doc.setTextColor(...gray);
     doc.text("Niveau indicatif base sur un nombre reduit d'informations, sans analyse complete du perimetre supply chain.", margin, y); y+=7;
 
-    // Niveaux de maturite
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
     doc.text("Les 6 niveaux de maturite Supply Chain", margin, y); y+=5;
 
     MATURITY_LEVELS.forEach(l => {
       const rgb = hexToRgb(l.color);
-      const isCur = Math.round(avgScore)===l.level;
-      // Clip detail text to avoid overflow: max 2 lines
+      const isCur = Math.floor(avgScore)===l.level;
       const detailFull = doc.splitTextToSize(l.detail, contentW-16);
-      const detailL = detailFull.slice(0,2); // max 2 lines
+      const detailL = detailFull.slice(0,2);
       const kwL = doc.splitTextToSize(l.keywords, contentW-16);
       const bH = Math.max(14, 6 + detailL.length*4 + kwL.length*3.5 + 2);
       if (y+bH>285) { doc.addPage(); y=20; }
@@ -538,7 +516,6 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       doc.setFillColor(...rgb); doc.circle(margin+4.5, y+bH/2, 3,"F");
       doc.setFontSize(8); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?255:30, isCur?255:30, isCur?255:30);
-      // Level label — clip to avoid overflow
       const labelText = `${l.level} - ${l.label}`;
       const labelLines = doc.splitTextToSize(labelText, isCur ? contentW-50 : contentW-20);
       doc.text(labelLines[0], margin+11, y+5);
@@ -622,20 +599,31 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       "RECOMMANDATIONS":          "Recommandations",
       "PROCHAINES ETAPES":        "Prochaines etapes",
     };
+
+    // FIX 2b: Textes IA PDF — contentW réduit + saut de page systématique + hauteur estimée avant dessin
+    const textContentW = contentW - 4; // marge supplémentaire pour éviter tout débordement
     sectionDefs.forEach(({ title, color, text }) => {
       if (!text) return;
       const clean = cleanSectionText(text, title.replace(/\s+/g,"\\s+"));
       if (!clean) return;
       const displayTitle = sectionLabels[title] || title;
-      if (y+22>280) { doc.addPage(); y=20; }
-      // Draw colored left bar + title
+
+      // Estimer hauteur totale de la section
+      const lines = doc.splitTextToSize(clean, textContentW);
+      const sectionH = 8 + lines.length * 4.5 + 7; // barre + titre + texte + marge
+
+      // Saut de page si la section ne tient pas entièrement
+      if (y + sectionH > 282) { doc.addPage(); y = 20; }
+
+      // Barre colorée gauche
       doc.setFillColor(...color); doc.rect(margin, y, 3, 5, "F");
       doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...color);
       doc.text(displayTitle, margin+6, y+4.5); y+=8;
+
+      // Texte — splitTextToSize avec contentW réduit
       doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
-      const lines = doc.splitTextToSize(clean, contentW);
-      if (y+lines.length*4.5>280) { doc.addPage(); y=20; }
-      doc.text(lines, margin, y); y+=lines.length*4.5+7;
+      doc.text(lines, margin, y);
+      y += lines.length * 4.5 + 7;
     });
 
     // ── PAGE 5 : Audit Supply Chain ─────────────────────────────────────────
@@ -665,10 +653,8 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
 
     auditPhases.forEach((phase, pi) => {
       if (y+30>280) { doc.addPage(); y=20; }
-      // Phase title
       doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
       doc.text(phase.icon, margin, y); y+=6;
-      // Items
       doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
       phase.items.forEach(item => {
         const itemLines = doc.splitTextToSize("- " + item, contentW-6);
@@ -679,16 +665,25 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       y += 6;
     });
 
-    // Contact block — always on same page, never orphaned
+    // FIX 3: Bloc contact — toutes les lignes en blanc explicitement
     if (y > 260) { doc.addPage(); y=20; }
     doc.setFillColor(...blue); doc.roundedRect(margin,y,contentW,28,3,3,"F");
+
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
     const nameLines = doc.splitTextToSize("Jean-Baptiste FLECK - Fondateur Aravis Performance", contentW-8);
     doc.text(nameLines, margin+4, y+7);
-    doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(255,255,255);
+
+    doc.setFontSize(8.5); doc.setFont("helvetica","normal");
+    doc.setTextColor(255,255,255); // blanc explicite avant chaque ligne
     doc.text("07 64 54 01 58", margin+4, y+15);
+
+    doc.setTextColor(255,255,255); // re-forcer blanc
     doc.text("jbfleck@aravisperformance.com", margin+4, y+21);
+
+    doc.setTextColor(255,255,255); // re-forcer blanc
     doc.text("www.aravisperformance.com", margin+80, y+15);
+
+    doc.setTextColor(255,255,255); // re-forcer blanc
     doc.text("Certifie QUALIOPI - Supply Chain Master", margin+80, y+21);
 
     const pageCount = doc.internal.getNumberOfPages();
@@ -842,11 +837,11 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           <div style={{ fontSize:13,color:"#64748b",marginBottom:6 }}>Résultats pour <strong>{form.prenom} {form.nom}</strong> — {form.entreprise}</div>
           <h1 style={{ fontSize:22,fontWeight:700,color:"#0f172a",marginBottom:8 }}>Maturité Supply Chain</h1>
           <p style={{ fontSize:12,color:"#94a3b8",fontStyle:"italic",marginBottom:16 }}>Niveau indicatif, basé sur un nombre réduit d'informations et sans analyse du périmètre supply chain.</p>
+          {/* FIX 1: badge affiche Math.floor(avgScore) comme niveau, pas Math.round */}
           <div style={{ display:"inline-block",background:level.color,color:"#fff",borderRadius:99,padding:"10px 28px",fontSize:20,fontWeight:700,marginBottom:12 }}>
             Niveau {avgScore}/5 — {level.label}
           </div>
           <p style={{ color:"#64748b",fontSize:14,margin:"0 0 16px",lineHeight:1.7 }}>{level.detail}</p>
-          {/* PDF export note just below score */}
           <div style={{ background:"#eff6ff",borderRadius:8,padding:"10px 16px",fontSize:13,color:C1,marginTop:4,display:"inline-flex",alignItems:"center",gap:8 }}>
             💡 <strong>Ce rapport est exportable en PDF</strong> — bouton rouge en bas de cette page.
           </div>
@@ -856,17 +851,16 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
         <div style={{ background:"#fff",borderRadius:16,padding:28,boxShadow:"0 4px 24px #0001",marginBottom:20 }}>
           <h2 style={{ fontSize:15,fontWeight:600,color:"#0f172a",marginBottom:18 }}>Les 6 niveaux de maturité Supply Chain</h2>
           {MATURITY_LEVELS.map(l=>(
-            <div key={l.level} style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"10px 14px",borderRadius:8,background:Math.round(avgScore)===l.level?`${l.color}18`:"#f8fafc",border:`2px solid ${Math.round(avgScore)===l.level?l.color:"transparent"}`,marginBottom:8 }}>
+            <div key={l.level} style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"10px 14px",borderRadius:8,background:Math.floor(avgScore)===l.level?`${l.color}18`:"#f8fafc",border:`2px solid ${Math.floor(avgScore)===l.level?l.color:"transparent"}`,marginBottom:8 }}>
               <div style={{ minWidth:28,height:28,borderRadius:99,background:l.color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,flexShrink:0,marginTop:2 }}>{l.level}</div>
               <div>
                 <span style={{ fontWeight:700,fontSize:13,color:"#0f172a" }}>{l.label}</span>
-                {Math.round(avgScore)===l.level&&<span style={{ fontSize:12,color:l.color,fontWeight:600,marginLeft:8 }}>← Votre niveau</span>}
+                {Math.floor(avgScore)===l.level&&<span style={{ fontSize:12,color:l.color,fontWeight:600,marginLeft:8 }}>← Votre niveau</span>}
                 <div style={{ fontSize:12,color:"#64748b",marginTop:2 }}>{l.detail}</div>
                 <div style={{ fontSize:11,color:l.color,fontWeight:600,marginTop:4 }}>{l.keywords}</div>
               </div>
             </div>
           ))}
-          {/* PDF note after the 6 levels */}
           <div style={{ background:"#eff6ff",borderRadius:8,padding:"10px 16px",fontSize:12,color:C1,marginTop:12,display:"flex",alignItems:"center",gap:8 }}>
             💡 <strong>Ce rapport complet est exportable en PDF</strong> — utilisez le bouton rouge en bas de page.
           </div>
@@ -881,7 +875,6 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           <ResponsiveContainer width="100%" height={480}>
             <RadarChart data={radarData} margin={{ top:55,right:115,bottom:55,left:115 }}>
               <PolarGrid />
-              {/* Average-level fill with 40% opacity */}
               <Radar name="Moyenne niveau" dataKey={()=>avgScore}
                 stroke="transparent" fill={level.color} fillOpacity={0.18}
                 dot={false} legendType="none" />
@@ -919,7 +912,6 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
               <Bar dataKey="score" radius={[0,6,6,0]}>
                 {barData.map((entry,i)=><Cell key={i} fill={getLevel(entry.score).color}/>)}
               </Bar>
-              {/* FIX: position label inside so it never clips */}
               <ReferenceLine x={avgScore} stroke="#dc2626" strokeDasharray="5 3" strokeWidth={2}
                 label={{ value:`Moy. ${avgScore}`, position:"insideTopRight", fontSize:11, fill:"#dc2626", fontWeight:700, offset:6 }}/>
             </BarChart>
@@ -934,7 +926,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           </div>
         </div>
 
-        {/* Analyse IA — 4 sections */}
+        {/* Analyse IA */}
         <div style={{ background:"#fff",borderRadius:16,padding:32,boxShadow:"0 4px 24px #0001",marginBottom:20 }}>
           <h2 style={{ fontSize:15,fontWeight:600,color:"#0f172a",marginBottom:20 }}>Analyse personnalisée</h2>
           {loading ? (
@@ -972,7 +964,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           )}
         </div>
 
-        {/* Audit Supply Chain — nouveau texte */}
+        {/* Audit Supply Chain */}
         <div style={{ background:"#fff",borderRadius:16,padding:28,boxShadow:"0 4px 24px #0001",marginBottom:20 }}>
           <h2 style={{ fontSize:15,fontWeight:600,color:"#0f172a",marginBottom:16 }}>Audit Supply Chain</h2>
           {[
@@ -1061,7 +1053,6 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
               <input type="checkbox" checked={contactPref.email} onChange={()=>handleContactChange("email")} style={{ width:18,height:18,accentColor:C1,cursor:"pointer" }}/>
               ✉️ Par email ({form.email})
             </label>
-            {/* Calendly shortcut */}
             <div style={{ borderTop:"1px solid #e2e8f0",paddingTop:12,marginTop:4 }}>
               <p style={{ fontSize:12,color:"#64748b",marginBottom:8 }}>Ou planifiez directement un créneau :</p>
               <a href="https://calendly.com/jbfleck/30min" target="_blank" rel="noopener noreferrer"
@@ -1072,7 +1063,6 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           </div>
           {!contactSelected&&<div style={{ background:"#fef2f2",borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:13,color:"#dc2626" }}>⚠️ Veuillez sélectionner une option de recontact pour télécharger votre rapport.</div>}
 
-          {/* RED download button */}
           <button onClick={exportResult} disabled={!canDownload}
             style={{ background:canDownload?"#dc2626":"#94a3b8", color:"#fff", border:"none", borderRadius:8,
               padding:"16px 32px", fontSize:16, fontWeight:700,
