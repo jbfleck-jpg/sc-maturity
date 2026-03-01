@@ -1,27 +1,20 @@
 import { useState } from "react";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Cell, Tooltip } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 
 // ══ MAKE WEBHOOKS ══════════════════════════════════════════════════════════
-// Scénario 1 — Enregistrement Google Sheets (déjà en place ✅)
 const WEBHOOK_SHEETS    = "https://hook.eu1.make.com/mvkyqewrwl5dqkpas3q7n6dkaujrlyjr";
-// Scénario 2 — Génération commentaire IA via Make → Anthropic (❌ à renseigner)
 const WEBHOOK_AI        = "https://hook.eu1.make.com/hxjtmnjcmd8ul50wsd8p3hii4jgzsvyv";
-// Scénario 3 — Envoi du code de vérification email via Brevo (❌ à renseigner)
 const WEBHOOK_SEND_CODE = "https://hook.eu1.make.com/wx9ax6kfm69gfgc13k85ttk46yc5hbqf";
-// Scénario 4 — Vérification du code email (❌ à renseigner)
 const WEBHOOK_CHECK_CODE = "https://hook.eu1.make.com/8rfm5s2uyj7x9frfh33bbvmflejqps8m";
 const WORKER_AI_URL = "https://sc-maturity-ai.jbfleck.workers.dev";
 
-// ═══════════════════════════════════════════════════════════════════════════
-
-const BLOCKED_DOMAINS = ["gmail.com","googlemail.com","hotmail.com","gmx.com","hotmail.fr","outlook.com","outlook.fr","live.com","live.fr","msn.com","yahoo.com","yahoo.fr","icloud.com","me.com","mac.com","laposte.net","orange.fr","sfr.fr","free.fr","wanadoo.fr","bbox.fr","numericable.fr","aol.com","protonmail.com","proton.me","tutanota.com","gmx.com","gmx.fr","mail.com","yandex.com","zoho.com","fastmail.com"];
+const BLOCKED_DOMAINS = ["gmail.com","googlemail.com","hotmail.com","gmx.com","hotmail.fr","outlook.com","outlook.fr","live.com","live.fr","msn.com","yahoo.com","yahoo.fr","icloud.com","me.com","mac.com","laposte.net","orange.fr","sfr.fr","free.fr","wanadoo.fr","bbox.fr","numericable.fr","aol.com","protonmail.com","proton.me","tutanota.com","gmx.fr","mail.com","yandex.com","zoho.com","fastmail.com"];
 const validEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const isProEmail = (e) => { const d = e.split("@")[1]?.toLowerCase(); return d && !BLOCKED_DOMAINS.includes(d); };
 
 const QUESTIONS = [
-  // STRATÉGIE SUPPLY CHAIN
   { theme: "Stratégie Supply Chain", q: "Comment votre direction générale perçoit-elle la Supply Chain ?", options: [
     "La SC se limite au transport et à l'entrepôt, considérés comme de simples postes de coût",
     "La logistique est gérée en silos, sans lien avec la stratégie commerciale ou de production",
@@ -38,7 +31,6 @@ const QUESTIONS = [
     "Un budget SC est défini avec des ROI mesurés par projet, permettant d'arbitrer les investissements. Le budget fait l'objet d'une revue périodique dans l'année",
     "Les investissements SC font l'objet d'un pilotage stratégique pluriannuel avec des ROI démontrés, contribuant à la performance globale et à une meilleure valorisation lors d'une éventuelle cession",
   ]},
-  // PROCESSUS & ORGANISATION
   { theme: "Processus & Organisation", q: "Comment vos processus Supply Chain sont-ils documentés et maîtrisés ?", options: [
     "Les processus ne sont pas documentés, le savoir-faire repose uniquement sur les individus",
     "Certains processus sont documentés mais de manière incomplète et non maintenue à jour",
@@ -55,7 +47,6 @@ const QUESTIONS = [
     "La fonction SC maîtrise ses master data, dispose d'un service méthodes logistiques avec des compétences en gestion de projet et pilote activement sa transformation",
     "L'entreprise benchmarke avec des pairs, adhère à des associations professionnelles pour identifier des gisements de gains, et collabore activement avec ses homologues chez les clients et fournisseurs",
   ]},
-  // APPROVISIONNEMENT & ACHATS
   { theme: "Approvisionnement & Achats", q: "Comment gérez-vous votre panel fournisseurs ?", options: [
     "Aucune gestion du panel, les fournisseurs sont choisis au cas par cas sans critères définis",
     "Des fournisseurs habituels existent mais sans évaluation ni contractualisation formelle",
@@ -72,7 +63,6 @@ const QUESTIONS = [
     "Les approvisionnements sont optimisés via des outils avancés ; le portefeuille fournisseurs et les paramètres de gestion font l'objet d'une revue formelle à fréquence régulière, a minima tous les 3 mois",
     "Les flux d'approvisionnement sont synchronisés en temps réel avec les fournisseurs via une plateforme dédiée (GPA, EDI, VMI) offrant une visibilité end-to-end",
   ]},
-  // SERVICE CLIENT
   { theme: "Service Client", q: "Comment est géré le flux de commande client (Order to Cash) ?", options: [
     "Les commandes sont saisies manuellement sans processus défini ni accusé de réception systématique",
     "Les commandes sont saisies et confirmées par email mais sans vérification de disponibilité des stocks ni intégration avec la production",
@@ -89,7 +79,6 @@ const QUESTIONS = [
     "Le Service Client pilote les réclamations, les enquêtes de satisfaction, le reporting KPI et alimente une démarche d'amélioration continue en lien avec la SC",
     "Le Service Client gère des programmes collaboratifs (GPA/VMI) avec les clients clés et co-construit les offres de service sur la base de données partagées en temps réel",
   ]},
-  // GESTION DES STOCKS
   { theme: "Gestion des stocks", q: "Comment définissez-vous et pilotez-vous votre politique de stocks ?", options: [
     "Les niveaux de stock sont déterminés au jugé ou en termes de couverture, sans technique d'optimisation ni cible définie. De nombreuses ruptures subites perturbent régulièrement l'activité",
     "Les niveaux de stock (mini/maxi, stocks de sécurité) sont dimensionnés sur la base de règles simples et empiriques",
@@ -106,7 +95,6 @@ const QUESTIONS = [
     "Des lecteurs codes-barres, datamatrix ou capteurs IoT fiabilisent les mouvements de stock. Les inventaires tournants sont systématiques sur les classes A et B (précision > 99,8%). Des alertes automatiques déclenchent des actions correctives en cas de dérive",
     "La visibilité complète des stocks en tous points du réseau permet de détecter immédiatement tout écart. Les inventaires tournants sont suffisamment fiables pour supprimer l'inventaire annuel, évitant toute interruption des réceptions et expéditions",
   ]},
-  // FLUX INTERNES
   { theme: "Flux internes", q: "Comment sont organisés et pilotés vos flux internes ?", options: [
     "Les flux internes sont gérés par la production sans organisation logistique dédiée",
     "Un responsable logistique interne existe mais les flux sont subis, non anticipés et peu formalisés",
@@ -123,7 +111,6 @@ const QUESTIONS = [
     "Les déplacements sont suivis et tracés. Le management visuel est digital et intégré dans un tableau de bord SC global avec des alertes en cas de dérive",
     "Des algorithmes d'optimisation, un jumeau numérique et des équipements IoT embarqués permettent de piloter et simuler les flux en temps réel, couplés à une démarche d'amélioration continue (VSM, kaizen)",
   ]},
-  // LOGISTIQUE
   { theme: "Logistique", q: "Comment est organisé et piloté votre entrepôt ? (stocks amont et aval, interne et externe)", options: [
     "Aucun système d'adressage, les produits sont entreposés sans organisation. La gestion des stocks repose sur des fichiers Excel. L'entrepôt est encombré et les allées obstruées",
     "L'entrepôt est rangé et propre, les flux entrée/sortie sont séparés. L'ERP est utilisé pour la gestion des stocks avec des fonctionnalités limitées (adressage fixe, mouvements de base)",
@@ -140,7 +127,6 @@ const QUESTIONS = [
     "Le contrôle de conformité des flux entrants et sortants est automatisé (caméras, portiques RFID) ou via l'intégration des ordres d'achat lors de la réception. Les indicateurs sont calculés en temps réel avec des alertes correctives",
     "La connaissance en temps réel des statuts de préparation et de livraison sur l'ensemble du réseau permet d'anticiper tout événement et d'optimiser les opérations avec l'ensemble des partenaires SC",
   ]},
-  // TRANSPORT
   { theme: "Transport", q: "Comment organisez-vous et pilotez-vous votre transport ?", options: [
     "Aucune organisation transport définie, les expéditions sont gérées au cas par cas sans prestataire attitré ni cahier des charges",
     "Des transporteurs habituels sont utilisés mais sans contrat formalisé, ni optimisation des tournées ou des chargements",
@@ -157,7 +143,6 @@ const QUESTIONS = [
     "La performance transport est pilotée en temps réel avec des alertes automatiques. Les émissions de CO2 sont disponibles et intégrées dans les critères de décision. Des revues de performance sont réalisées avec les principaux transporteurs",
     "Les indicateurs transport sont partagés avec tous les transporteurs. L'optimisation est continue grâce à des algorithmes de planification intégrant contraintes capacitaires, délais, coûts et empreinte carbone",
   ]},
-  // SYSTÈME D'INFORMATION
   { theme: "Système d'Information", q: "Quel est le niveau de maturité et d'intégration de votre SI Supply Chain ?", options: [
     "Aucun outil de gestion, les données sont gérées sur papier ou via des fichiers Excel non partagés",
     "Un ERP basique est en place mais utilisé partiellement. Les commandes achat et les commandes clients sont ressaisies manuellement dans l'ERP",
@@ -234,12 +219,9 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [sheetStatus, setSheetStatus] = useState("idle");
   const [contactPref, setContactPref] = useState({ phone: false, email: false });
-  const [resultSent, setResultSent] = useState(false);
 
-  // Score par question (0-5)
   const qScore = (i) => answers[i] ?? 0;
 
-  // Score par thème (moyenne des questions du thème, ramenée sur 5)
   const themeScore = (theme) => {
     const idxs = QUESTIONS.map((q,i) => q.theme === theme ? i : -1).filter(i => i >= 0);
     const avg = idxs.reduce((a,i) => a + qScore(i), 0) / idxs.length;
@@ -261,8 +243,6 @@ export default function App() {
     setEmailErr("");
     if (!validEmail(form.email)) { setEmailErr("Veuillez saisir un email valide."); return; }
     if (!isProEmail(form.email)) { setEmailErr("Merci de saisir votre email professionnel (Gmail, Hotmail, Yahoo et autres messageries personnelles non acceptées)."); return; }
-
-    // Scénario 3 — Envoi du code via Make → Mailjet
     setCodeSending(true);
     try {
       await fetch(WEBHOOK_SEND_CODE, {
@@ -281,17 +261,13 @@ export default function App() {
 
   const handleVerifyCode = async () => {
     setCodeErr("");
-
-    // Scénario 4 — Vérification du code via Make → Google Sheets
     try {
-      const res = await fetch(WEBHOOK_CHECK_CODE, {
+      await fetch(WEBHOOK_CHECK_CODE, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ email: form.email, code: codeInput.trim() }),
       });
-      // Avec no-cors, on ne peut pas lire la réponse Make
-      // On passe directement à l'étape résultat si la requête n'a pas échoué
       setStep("result");
     } catch {
       setCodeErr("Erreur de vérification. Veuillez réessayer.");
@@ -315,19 +291,19 @@ Rédige un commentaire professionnel et bienveillant de 8-10 lignes en prose qui
 Prose uniquement, pas de bullet points, ton direct et expert.`;
 
     try {
-      // Scénario 2 — Appel via Make (clé API sécurisée côté Make)
-      // Appel direct Anthropic (proxy géré par l'artifact Claude)
-const res = await fetch(WORKER_AI_URL, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ prompt }),
-});
-if (!res.ok) throw new Error(`Worker error: ${res.status}`);
-const data = await res.json();
-const comment = data.comment || "Commentaire indisponible.";
-        setAiComment(comment);
-        sendToSheets(comment);
-    } catch { setAiComment("Erreur lors de la génération du commentaire."); }
+      const res = await fetch(WORKER_AI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!res.ok) throw new Error(`Worker error: ${res.status}`);
+      const data = await res.json();
+      const comment = data.comment || "Commentaire indisponible.";
+      setAiComment(comment);
+      sendToSheets(comment);
+    } catch {
+      setAiComment("Erreur lors de la génération du commentaire.");
+    }
     setLoading(false);
   };
 
@@ -358,49 +334,166 @@ const comment = data.comment || "Commentaire indisponible.";
   };
 
   const exportResult = () => {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const blue = [30, 64, 175];
-  const dark = [15, 23, 42];
-  const gray = [71, 85, 105];
-  const lightBlue = [239, 246, 255];
-  const pageW = 210;
-  const margin = 20;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const blue = [30, 64, 175];
+    const dark = [15, 23, 42];
+    const gray = [71, 85, 105];
+    const lightBlue = [239, 246, 255];
+    const pageW = 210;
+    const margin = 20;
 
-  doc.setFillColor(...blue);
-  doc.rect(0, 0, pageW, 28, "F");
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text("Aravis Performance", margin, 11);
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(191, 219, 254);
-  doc.text("Cabinet Conseil Supply Chain & Excellence Operationnelle", margin, 17);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text("Rapport de maturite Supply Chain", margin, 24);
+    doc.setFillColor(...blue);
+    doc.rect(0, 0, pageW, 28, "F");
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Aravis Performance", margin, 11);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(191, 219, 254);
+    doc.text("Cabinet Conseil Supply Chain & Excellence Operationnelle", margin, 17);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Rapport de maturite Supply Chain", margin, 24);
 
-  let y = 38;
-  doc.setFillColor(...lightBlue);
-  doc.roundedRect(margin, y, pageW - margin * 2, 22, 3, 3, "F");
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...dark);
-  doc.text(`${form.prenom} ${form.nom}`, margin + 4, y + 7);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(...gray);
-  doc.text(`${form.entreprise}  -  ${form.email}`, margin + 4, y + 13);
-  doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, margin + 4, y + 19);
+    let y = 38;
+    doc.setFillColor(...lightBlue);
+    doc.roundedRect(margin, y, pageW - margin * 2, 22, 3, 3, "F");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...dark);
+    doc.text(`${form.prenom} ${form.nom}`, margin + 4, y + 7);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...gray);
+    doc.text(`${form.entreprise}  -  ${form.email}`, margin + 4, y + 13);
+    doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, margin + 4, y + 19);
 
-  y += 30;
-  doc.setFillColor(...blue);
-  doc.roundedRect(margin, y, (pageW - margin * 2) / 2 - 4, 22, 3, 3, "F");
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text(`${avgScore}/5`, margin + 6, y + 1
+    y += 30;
+    doc.setFillColor(...blue);
+    doc.roundedRect(margin, y, (pageW - margin * 2) / 2 - 4, 22, 3, 3, "F");
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${avgScore}/5`, margin + 6, y + 14);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(191, 219, 254);
+    doc.text("Score global", margin + 6, y + 20);
+    const levelX = margin + (pageW - margin * 2) / 2 + 4;
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(levelX, y, (pageW - margin * 2) / 2 - 4, 22, 3, 3, "F");
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...dark);
+    doc.text(level.label, levelX + 4, y + 12);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...gray);
+    doc.text(level.desc, levelX + 4, y + 19);
+
+    y += 30;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...dark);
+    doc.text("Scores par thematique", margin, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [["Thematique", "Score", "Niveau"]],
+      body: THEMES.map(t => {
+        const s = themeScore(t);
+        const l = getLevel(s);
+        return [t, `${s} / 5`, l.label];
+      }),
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: blue, textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 90 },
+        1: { cellWidth: 25, halign: "center" },
+        2: { cellWidth: 45, halign: "center" },
+      },
+    });
+
+    y = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...dark);
+    doc.text("Detail des reponses", margin, y);
+    y += 4;
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [["#", "Thematique", "Reponse selectionnee", "Niv."]],
+      body: QUESTIONS.map((q, i) => [
+        `Q${i + 1}`,
+        q.theme,
+        q.options[qScore(i)],
+        qScore(i),
+      ]),
+      styles: { fontSize: 7.5, cellPadding: 2, overflow: "linebreak" },
+      headStyles: { fillColor: blue, textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 10, halign: "center" },
+        1: { cellWidth: 38 },
+        2: { cellWidth: 105 },
+        3: { cellWidth: 10, halign: "center" },
+      },
+    });
+
+    y = doc.lastAutoTable.finalY + 10;
+    if (y > 240) { doc.addPage(); y = 20; }
+
+    doc.setFillColor(...lightBlue);
+    doc.roundedRect(margin, y, pageW - margin * 2, 8, 2, 2, "F");
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...blue);
+    doc.text("Analyse personnalisee", margin + 4, y + 5.5);
+    y += 12;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...dark);
+    const lines = doc.splitTextToSize(aiComment, pageW - margin * 2);
+    doc.text(lines, margin, y);
+    y += lines.length * 5 + 10;
+
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFillColor(...blue);
+    doc.roundedRect(margin, y, pageW - margin * 2, 28, 3, 3, "F");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("Jean-Baptiste FLECK - Fondateur Aravis Performance", margin + 4, y + 8);
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(191, 219, 254);
+    doc.text("07 64 54 01 58", margin + 4, y + 15);
+    doc.text("jbfleck@aravisperformance.com", margin + 4, y + 21);
+    doc.text("www.aravisperformance.com", margin + 80, y + 15);
+    doc.text("Certifie QUALIOPI - Supply Chain Master", margin + 80, y + 21);
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        `Page ${i} / ${pageCount}  -  Aravis Performance  -  Rapport confidentiel`,
+        pageW / 2, 292, { align: "center" }
+      );
+    }
+
+    doc.save(`maturite-supply-chain-${form.entreprise.replace(/\s+/g, "-")}.pdf`);
+  };
+
   // ══ INTRO ══════════════════════════════════════════════════
   if (step === "intro") return (
     <div style={{ minHeight:"100vh", background:"#f8fafc" }}>
@@ -576,19 +669,62 @@ const comment = data.comment || "Commentaire indisponible.";
         {/* Radar */}
         <div style={{ background:"#fff", borderRadius:16, padding:32, boxShadow:"0 4px 24px #0001", marginBottom:20 }}>
           <h2 style={{ fontSize:15, fontWeight:600, color:"#0f172a", marginBottom:20, textAlign:"center" }}>Radar par thématique</h2>
-          <ResponsiveContainer width="100%" height={380}>
-            <RadarChart data={radarData} margin={{ top:20, right:40, bottom:20, left:40 }}>
+          <ResponsiveContainer width="100%" height={420}>
+            <RadarChart data={radarData} margin={{ top:30, right:60, bottom:30, left:60 }}>
               <PolarGrid />
-              <PolarAngleAxis dataKey="theme" tick={{ fontSize:11, fill:"#475569" }} />
+              <PolarAngleAxis dataKey="theme" tick={(props) => {
+                const { x, y, cx, cy, payload } = props;
+                const words = payload.value.split(" ");
+                const lines = [];
+                let current = "";
+                words.forEach(w => {
+                  if ((current + " " + w).trim().length > 12) {
+                    if (current) lines.push(current);
+                    current = w;
+                  } else {
+                    current = (current + " " + w).trim();
+                  }
+                });
+                if (current) lines.push(current);
+                const anchor = Math.abs(x - cx) < 10 ? "middle" : x > cx ? "start" : "end";
+                return (
+                  <text x={x} y={y} textAnchor={anchor} fill="#475569" fontSize={10}>
+                    {lines.map((line, i) => (
+                      <tspan key={i} x={x} dy={i === 0 ? `-${(lines.length - 1) * 7}` : "14"}>{line}</tspan>
+                    ))}
+                  </text>
+                );
+              }} />
               <PolarRadiusAxis angle={30} domain={[0,5]} tick={{ fontSize:9 }} tickCount={6} />
               <Radar name="Score" dataKey="score" stroke="#1e40af" fill="#1e40af" fillOpacity={0.25} strokeWidth={2} />
             </RadarChart>
           </ResponsiveContainer>
-          <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap", marginTop:16 }}>
-            {THEMES.map((t,i) => (
-              <div key={i} style={{ textAlign:"center", minWidth:80 }}>
-                <div style={{ fontWeight:700, color:"#1e40af", fontSize:18 }}>{themeScore(t)}<span style={{ fontSize:11, color:"#94a3b8" }}>/5</span></div>
-                <div style={{ fontSize:11, color:"#64748b", lineHeight:1.3 }}>{t}</div>
+        </div>
+
+        {/* Histogramme */}
+        <div style={{ background:"#fff", borderRadius:16, padding:32, boxShadow:"0 4px 24px #0001", marginBottom:20 }}>
+          <h2 style={{ fontSize:15, fontWeight:600, color:"#0f172a", marginBottom:20, textAlign:"center" }}>Scores par thématique</h2>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart
+              data={[...THEMES.map(t => ({ theme: t, score: themeScore(t) }))].sort((a,b) => a.score - b.score)}
+              layout="vertical"
+              margin={{ top:0, right:40, bottom:0, left:140 }}
+            >
+              <XAxis type="number" domain={[0,5]} tickCount={6} tick={{ fontSize:10 }} />
+              <YAxis type="category" dataKey="theme" tick={{ fontSize:11, fill:"#475569" }} width={135} />
+              <Tooltip formatter={(v) => [`${v}/5`, "Score"]} />
+              <Bar dataKey="score" radius={[0,6,6,0]}>
+                {[...THEMES.map(t => ({ theme: t, score: themeScore(t) }))].sort((a,b) => a.score - b.score).map((entry, i) => (
+                  <Cell key={i} fill={getLevel(entry.score).color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap", marginTop:16 }}>
+            {MATURITY_LEVELS.map(l => (
+              <div key={l.level} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:"#475569" }}>
+                <div style={{ width:12, height:12, borderRadius:3, background:l.color }} />
+                {l.level} — {l.label}
               </div>
             ))}
           </div>
@@ -680,7 +816,7 @@ const comment = data.comment || "Commentaire indisponible.";
           </div>
           <button onClick={exportResult} disabled={loading || !aiComment}
             style={{ background: loading || !aiComment ? "#94a3b8" : "#0f172a", color:"#fff", border:"none", borderRadius:8, padding:"14px 32px", fontSize:15, fontWeight:600, cursor: loading || !aiComment ? "not-allowed" : "pointer", width:"100%" }}>
-            ⬇️ Télécharger mes résultats
+            ⬇️ Télécharger mon rapport PDF
           </button>
         </div>
 
