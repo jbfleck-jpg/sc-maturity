@@ -33,19 +33,47 @@ const hexToRgb = (hex) => [
   parseInt(hex.slice(5,7),16)
 ];
 
-// Parse AI text into 5 named sections by double-newline paragraphs
+// Parse AI text into 5 named sections by detecting ALL-CAPS title lines
 const parseAiSections = (text) => {
   if (!text) return null;
-  const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-  if (paras.length >= 5) {
-    return { maturityLevel: paras[0], strengths: paras[1], improvements: paras[2], recommendations: paras[3], nextSteps: paras.slice(4).join("\n\n") };
-  } else if (paras.length === 4) {
-    return { maturityLevel: paras[0], strengths: paras[1], improvements: paras[2], recommendations: paras[3], nextSteps: "" };
-  } else if (paras.length === 3) {
-    return { maturityLevel: "", strengths: paras[0], improvements: paras[1], recommendations: paras[2], nextSteps: "" };
-  } else {
-    return { maturityLevel: "", strengths: text, improvements: "", recommendations: "", nextSteps: "" };
+  const TITLES = [
+    { key: "maturityLevel",   patterns: ["VOTRE NIVEAU DE MATURITE", "VOTRE NIVEAU DE MATURITÉ"] },
+    { key: "strengths",       patterns: ["POINTS FORTS"] },
+    { key: "improvements",    patterns: ["POINTS D'AMELIORATION", "POINTS D'AMÉLIORATION", "POINTS DE PROGRESSION"] },
+    { key: "recommendations", patterns: ["RECOMMANDATIONS"] },
+    { key: "nextSteps",       patterns: ["PROCHAINES ETAPES", "PROCHAINES ÉTAPES"] },
+  ];
+  // Split text into lines
+  const lines = text.split("\n");
+  // Find where each section starts (line index of its title)
+  const sectionStarts = [];
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim().toUpperCase();
+    TITLES.forEach(({ key, patterns }) => {
+      if (patterns.some(p => trimmed === p || trimmed.startsWith(p))) {
+        sectionStarts.push({ key, idx });
+      }
+    });
+  });
+  if (sectionStarts.length === 0) {
+    // Fallback: split by double newlines
+    const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+    return {
+      maturityLevel: paras[0] || "",
+      strengths: paras[1] || "",
+      improvements: paras[2] || "",
+      recommendations: paras[3] || "",
+      nextSteps: paras[4] || "",
+    };
   }
+  // Extract content between section titles (skip the title line itself)
+  const result = { maturityLevel:"", strengths:"", improvements:"", recommendations:"", nextSteps:"" };
+  sectionStarts.forEach(({ key, idx }, i) => {
+    const endIdx = i + 1 < sectionStarts.length ? sectionStarts[i+1].idx : lines.length;
+    const sectionLines = lines.slice(idx + 1, endIdx).join("\n").trim();
+    result[key] = sectionLines;
+  });
+  return result;
 };
 
 // Strip the ALL-CAPS section title from start of paragraph text
@@ -340,7 +368,7 @@ REGLES ABSOLUES :
 - Reviens a la ligne apres CHAQUE phrase (une phrase = une ligne).
 - MAXIMUM 700 mots au total.
 - Ton direct, expert, bienveillant.
-- Ne jamais ecrire "mon audit". Ecrire "un audit" ou "l'audit Aravis Performance".
+- Ne jamais ecrire "mon audit" ni "me contacter". Ecrire "un audit", "l'audit Aravis Performance", "contacter Aravis Performance".
 - Commence chaque paragraphe par son titre en MAJUSCULES sur sa propre ligne.
 
 PARAGRAPHE 1 - titre : VOTRE NIVEAU DE MATURITE
