@@ -245,7 +245,7 @@ const drawRadarPDF = (doc, cx, cy, radius, themeScores, avgScore) => {
     if (curr) lines.push(curr);
     const lh = 4;
     const sy = ly - ((lines.length-1)*lh)/2;
-    lines.forEach((line,li) => doc.text(line, lx, sy+li*lh, { align }));
+    lines.forEach((line,li) => doc.text(noPDF(line), lx, sy+li*lh, { align }));
   });
   doc.setFont("helvetica","normal");
 };
@@ -284,8 +284,8 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
       else curr = (curr+" "+w).trim();
     });
     if (curr) lines.push(curr);
-    if (lines.length === 1) doc.text(lines[0], startX, y+barH-1);
-    else { doc.text(lines[0], startX, y+3); doc.text(lines[1]||"", startX, y+barH); }
+    if (lines.length === 1) doc.text(noPDF(lines[0]), startX, y+barH-1);
+    else { doc.text(noPDF(lines[0]), startX, y+3); doc.text(noPDF(lines[1]||""), startX, y+barH); }
     doc.setFillColor(...rgb);
     doc.roundedRect(startX+labelW, y, bw, barH, 1.5, 1.5, "F");
     doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
@@ -299,7 +299,7 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
     const rgb = hexToRgb(l.color);
     doc.setFillColor(...rgb); doc.rect(lx, legendY, 4, 4, "F");
     doc.setFontSize(6); doc.setTextColor(60,60,60);
-    doc.text(`${l.level}-${l.label}`, lx+5, legendY+3.5);
+    doc.text(`${l.level}-${noPDF(l.label)}`, lx+5, legendY+3.5);
     lx += 32;
     if (lx > startX+chartW-10) lx = startX;
   });
@@ -487,6 +487,15 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     } catch { setSheetStatus("error"); }
   };
 
+  // Normalise les accents pour jsPDF (Helvetica ne supporte pas UTF-8 étendu)
+  const noPDF = (s) => s
+    .replace(/[àâä]/g,"a").replace(/[éèêë]/g,"e").replace(/[îï]/g,"i")
+    .replace(/[ôö]/g,"o").replace(/[ùûü]/g,"u").replace(/[ÀÂÄ]/g,"A")
+    .replace(/[ÉÈÊË]/g,"E").replace(/[ÎÏ]/g,"I").replace(/[ÔÖ]/g,"O")
+    .replace(/[ÙÛÜ]/g,"U").replace(/[ç]/g,"c").replace(/[Ç]/g,"C")
+    .replace(/[æ]/g,"ae").replace(/[œ]/g,"oe").replace(/[ñ]/g,"n")
+    .replace(/['/]/g,"'").replace(/[–—]/g,"-").replace(/[«»]/g,'"');
+
   const exportResult = async () => {
     await sendToSheets();
     if (contactPref.phone || contactPref.email) await sendNotification();
@@ -500,7 +509,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     doc.setFontSize(14); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
     doc.text("Aravis Performance", margin, 9);
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    const rTitle = `Rapport de maturite simplifie de la supply chain de : ${form.entreprise}`;
+    const rTitle = `Rapport de maturite simplifie de la supply chain de : ${noPDF(form.entreprise)}`;
     const rTitleLines = doc.splitTextToSize(rTitle, contentW);
     doc.text(rTitleLines, margin, 17);
     // FIX 3: coordonnées en blanc — forcer setTextColor avant chaque ligne
@@ -518,9 +527,9 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
 
     doc.setFillColor(...lightBlue); doc.roundedRect(margin, y, idW, rowH, 2,2,"F");
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
-    doc.text(`${form.prenom} ${form.nom}`, margin+4, y+6);
+    doc.text(noPDF(`${form.prenom} ${form.nom}`), margin+4, y+6);
     doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...gray);
-    const entEmail = doc.splitTextToSize(`${form.entreprise} - ${form.email}`, idW-8);
+    const entEmail = doc.splitTextToSize(noPDF(`${form.entreprise} - ${form.email}`), idW-8);
     entEmail.forEach((l,i) => doc.text(l, margin+4, y+12+i*4));
     doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, margin+4, y+rowH-3);
 
@@ -534,7 +543,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     const lx = sx + scoreBlockW + gap;
     doc.setFillColor(...lvlRgb); doc.roundedRect(lx, y, levelBlockW, rowH, 2,2,"F");
     doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text(level.label, lx + levelBlockW/2, y+13, { align:"center" });
+    doc.text(noPDF(level.label), lx + levelBlockW/2, y+13, { align:"center" });
 
     y += rowH + 5;
 
@@ -573,7 +582,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
         // Label sous le chiffre si actif
         if (isActive) {
           doc.setFontSize(5.5); doc.setFont("helvetica","normal");
-          doc.text(l.label, nx + boxW / 2, by + bh - 2, { align:"center" });
+          doc.text(noPDF(l.label), nx + boxW / 2, by + bh - 2, { align:"center" });
         }
         nx += boxW + boxGap;
       });
@@ -592,9 +601,9 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
 
       // Calcul précis : on prépare toutes les lignes AVANT de dessiner la boîte
       doc.setFontSize(7); doc.setFont("helvetica","normal");
-      const detailLines = doc.splitTextToSize(l.detail, contentW-18).slice(0,3);
+      const detailLines = doc.splitTextToSize(noPDF(l.detail), contentW-18).slice(0,3);
       doc.setFontSize(6); doc.setFont("helvetica","bold");
-      const kwLines = doc.splitTextToSize(l.keywords, contentW-18).slice(0,2);
+      const kwLines = doc.splitTextToSize(noPDF(l.keywords), contentW-18).slice(0,2);
 
       // Hauteur réelle : titre(5) + detail(4/ligne) + kw(3.5/ligne) + padding(6)
       const bH = Math.max(16, 6 + detailLines.length*4.2 + kwLines.length*3.8 + 4);
@@ -611,7 +620,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       // Titre niveau
       doc.setFontSize(8); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?255:30, isCur?255:30, isCur?255:30);
-      doc.text(`${l.level} - ${l.label}`, margin+11, y+5.5);
+      doc.text(`${l.level} - ${noPDF(l.label)}`, margin+11, y+5.5);
 
       if (isCur) {
         doc.setFontSize(7); doc.setTextColor(255,255,255);
@@ -621,13 +630,13 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       // Texte détail
       doc.setFontSize(7); doc.setFont("helvetica","normal");
       doc.setTextColor(isCur?240:60, isCur?240:60, isCur?240:60);
-      doc.text(detailLines, margin+11, y+11);
+      doc.text(detailLines.map(noPDF), margin+11, y+11);
 
       // Mots-clés
       const kwY = y + 11 + detailLines.length * 4.2;
       doc.setFontSize(6); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?220:rgb[0], isCur?220:rgb[1], isCur?220:rgb[2]);
-      doc.text(kwLines, margin+11, kwY);
+      doc.text(kwLines.map(noPDF), margin+11, kwY);
 
       y += bH + 2;
     });
@@ -640,7 +649,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     autoTable(doc, {
       startY:y, margin:{left:margin,right:margin},
       head:[["Thematique","Score","Niveau"]],
-      body:THEMES.map(t=>{ const s=themeScore(t); return [t,`${s} / 5`,getLevel(s).label]; }),
+      body:THEMES.map(t=>{ const s=themeScore(t); return [noPDF(t),`${s} / 5`,noPDF(getLevel(s).label)]; }),
       styles:{fontSize:9,cellPadding:3},
       headStyles:{fillColor:blue,textColor:255,fontStyle:"bold"},
       alternateRowStyles:{fillColor:[248,250,252]},
@@ -669,7 +678,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     autoTable(doc, {
       startY:y, margin:{left:margin,right:margin},
       head:[["#","Thematique","Reponse selectionnee","Niv."]],
-      body:QUESTIONS.map((q,i)=>[`Q${i+1}`,q.theme,q.options[qScore(i)],qScore(i)]),
+      body:QUESTIONS.map((q,i)=>[`Q${i+1}`,noPDF(q.theme),noPDF(q.options[qScore(i)]),qScore(i)]),
       styles:{fontSize:7.5,cellPadding:2,overflow:"linebreak"},
       headStyles:{fillColor:blue,textColor:255,fontStyle:"bold"},
       alternateRowStyles:{fillColor:[248,250,252]},
@@ -707,7 +716,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       const displayTitle = sectionLabels[title] || title;
 
       // Estimer hauteur totale de la section
-      const lines = doc.splitTextToSize(clean, textContentW);
+      const lines = doc.splitTextToSize(noPDF(clean), textContentW);
       const sectionH = 8 + lines.length * 4.5 + 7; // barre + titre + texte + marge
 
       // Saut de page si la section ne tient pas entièrement
@@ -763,83 +772,83 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       y += 6;
     });
 
-    // FIX 3: Bloc contact — toutes les lignes en blanc explicitement
-    if (y > 260) { doc.addPage(); y=20; }
-    doc.setFillColor(...blue); doc.roundedRect(margin,y,contentW,28,3,3,"F");
-
+    // ── BLOC 1 : Coordonnees Aravis Performance (fond bleu, texte blanc) ────────
+    if (y + 28 > 280) { doc.addPage(); y = 20; }
+    doc.setFillColor(...blue);
+    doc.roundedRect(margin, y, contentW, 28, 3, 3, "F");
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    const nameLines = doc.splitTextToSize("Jean-Baptiste FLECK - Fondateur Aravis Performance", contentW-8);
-    doc.text(nameLines, margin+4, y+7);
+    doc.text("Jean-Baptiste FLECK - Fondateur Aravis Performance", margin+4, y+7);
+    doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(255,255,255);
+    doc.text("07 64 54 01 58",                        margin+4,  y+15);
+    doc.text("jbfleck@aravisperformance.com",          margin+4,  y+22);
+    doc.text("www.aravisperformance.com",              margin+90, y+15);
+    doc.text("Certifie QUALIOPI - Supply Chain Master", margin+90, y+22);
 
-    doc.setFontSize(8.5); doc.setFont("helvetica","normal");
-    doc.setTextColor(255,255,255); // blanc explicite avant chaque ligne
-    doc.text("07 64 54 01 58", margin+4, y+15);
+    y += 28 + 12; // hauteur du bloc + espace entre les 2 blocs
 
-    doc.setTextColor(255,255,255); // re-forcer blanc
-    doc.text("jbfleck@aravisperformance.com", margin+4, y+21);
+    // ── BLOC 2 : Votre interlocuteur (fond bleu clair) ────────────────────────
+    if (y + 90 > 285) { doc.addPage(); y = 20; }
 
-    doc.setTextColor(255,255,255); // re-forcer blanc
-    doc.text("www.aravisperformance.com", margin+80, y+15);
-
-    doc.setTextColor(255,255,255); // re-forcer blanc
-    doc.text("Certifie QUALIOPI - Supply Chain Master", margin+80, y+21);
-
-    // ── Bloc interlocuteur JBF (page 5) ──────────────────────────────────────
-    y += 8;
-    if (y + 40 > 280) { doc.addPage(); y = 20; }
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
-    doc.text("Votre interlocuteur", margin, y); y += 7;
+    doc.text("Votre interlocuteur", margin, y); y += 6;
 
-    // Fond bleu clair
-    doc.setFillColor(...lightBlue); doc.roundedRect(margin, y, contentW, 36, 3,3,"F");
-
-    // Avatar JBF
-    doc.setFillColor(...blue); doc.circle(margin+10, y+10, 7, "F");
+    // Carte identite (fond bleu clair)
+    const cardH2 = 30;
+    doc.setFillColor(...lightBlue);
+    doc.roundedRect(margin, y, contentW, cardH2, 3, 3, "F");
+    // Avatar cercle bleu
+    doc.setFillColor(...blue);
+    doc.circle(margin + 11, y + cardH2/2, 8, "F");
     doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text("JBF", margin+10, y+12, { align:"center" });
-
-    // Nom et titre
+    doc.text("JBF", margin + 11, y + cardH2/2 + 2, { align:"center" });
+    // Nom + titre
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
-    doc.text("Jean-Baptiste FLECK", margin+22, y+8);
+    doc.text("Jean-Baptiste FLECK", margin + 24, y + 8);
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
-    doc.text("Fondateur - Aravis Performance - Certifie QUALIOPI", margin+22, y+14);
+    doc.text("Fondateur - Aravis Performance - Certifie QUALIOPI", margin + 24, y + 14);
+    // Coordonnees dans la carte
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
+    doc.text("07 64 54 01 58",             margin + 24, y + 21);
+    doc.text("jbfleck@aravisperformance.com", margin + 24, y + 27);
+    doc.text("www.aravisperformance.com",   margin + 105, y + 21);
+    doc.text("Certifie QUALIOPI",           margin + 105, y + 27);
 
-    // Coordonnées
-    doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
-    doc.text("07 64 54 01 58", margin+22, y+22);
-    doc.text("jbfleck@aravisperformance.com", margin+22, y+28);
-    doc.text("www.aravisperformance.com", margin+100, y+22);
-    doc.text("Certifie QUALIOPI - Supply Chain Master", margin+100, y+28);
+    y += cardH2 + 8;
 
-    // Items expertise (2 colonnes)
-    y += 38;
+    // Items expertise en 2 colonnes
     const jbfItems = [
       "25 ans d'experience en Supply Chain & Excellence Operationnelle",
-      "Plus de 20 audits-diagnostics en 5 ans",
+      "Plus de 20 audits-diagnostics realises en 5 ans",
       "Auditeur certifie France Supply Chain & Supply Chain Master",
       "Maitrise des referentiels MMOG/LE et Supply Chain Plus",
       "Black Belt Lean 6 Sigma",
       "CPIM - Certified in Planning and Inventory Management",
     ];
-    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
+    const colW = contentW / 2 - 4;
+    const rowH2 = 9;
+    doc.setFontSize(8); doc.setFont("helvetica","normal");
     jbfItems.forEach((item, i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
       const ix = col === 0 ? margin : margin + contentW/2 + 4;
-      const iy = y + row * 8;
-      if (iy + 6 > 285) return;
-      doc.setFillColor(...hexToRgb(MATURITY_LEVELS[Math.min(i,5)].color));
-      doc.circle(ix + 1.5, iy + 0.5, 1.5, "F");
+      const iy = y + row * rowH2;
+      if (iy + 6 > 283) return;
+      const rgb = hexToRgb(MATURITY_LEVELS[Math.min(i, 5)].color);
+      doc.setFillColor(...rgb);
+      doc.circle(ix + 2, iy + 1, 1.8, "F");
       doc.setTextColor(...dark);
-      const txt = doc.splitTextToSize(item, contentW/2 - 8);
-      doc.text(txt[0], ix + 5, iy + 2);
+      const txt = doc.splitTextToSize(item, colW - 6);
+      doc.text(txt[0], ix + 6, iy + 3);
     });
-    y += Math.ceil(jbfItems.length / 2) * 8 + 4;
+    y += Math.ceil(jbfItems.length / 2) * rowH2 + 4;
 
     const pageCount = doc.internal.getNumberOfPages();
     for (let i=1; i<=pageCount; i++) {
-      doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148,163,184);
-      doc.text(`Page ${i} / ${pageCount}  -  Aravis Performance  -  Rapport confidentiel`, pageW/2, 292, { align:"center" });
+      doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(80,80,80);
+      doc.text(
+        noPDF(`Page ${i} / ${pageCount}  -  Aravis Performance  -  Rapport d'audit simplifie et personnalise a titre indicatif. Ne vaut pas pour un audit complet.`),
+        pageW/2, 292, { align:"center" }
+      );
     }
     doc.save(`maturite-supply-chain-${form.entreprise.replace(/\s+/g,"-")}.pdf`);
   };
