@@ -250,6 +250,15 @@ const drawRadarPDF = (doc, cx, cy, radius, themeScores, avgScore) => {
   doc.setFont("helvetica","normal");
 };
 
+// Normalise les accents pour jsPDF (Helvetica standard ne supporte pas UTF-8 étendu)
+const noPDF = (s) => (s || "")
+  .replace(/[àâä]/g,"a").replace(/[éèêë]/g,"e").replace(/[îï]/g,"i")
+  .replace(/[ôö]/g,"o").replace(/[ùûü]/g,"u").replace(/[ÀÂÄ]/g,"A")
+  .replace(/[ÉÈÊË]/g,"E").replace(/[ÎÏ]/g,"I").replace(/[ÔÖ]/g,"O")
+  .replace(/[ÙÛÜ]/g,"U").replace(/[ç]/g,"c").replace(/[Ç]/g,"C")
+  .replace(/[æ]/g,"ae").replace(/[œ]/g,"oe").replace(/[ñ]/g,"n")
+  .replace(/['’‘]/g,"'").replace(/[–—]/g,"-").replace(/[«»]/g,'"');
+
 const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
   const barH = 9; const gap = 5;
   const labelW = 66; const scoreW = 14;
@@ -439,16 +448,34 @@ Rappelle qu'un audit complet contient entre 150 et 200 questions par domaine.
 Invite chaleureusement a contacter Aravis Performance pour un audit complet ou cible sur une fonction prioritaire.
 (5 a 6 phrases)`;
 
-    try {
+    const tryFetch = async (attempt) => {
       const res = await fetch(WORKER_AI_URL, {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ prompt, max_tokens:3500 })
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errText = await res.text().catch(()=>"");
+        throw new Error(`HTTP ${res.status}: ${errText.slice(0,200)}`);
+      }
       const data = await res.json();
-      setAiComment(stripMarkdown(data.comment || "Commentaire indisponible."));
-    } catch { setAiComment("Erreur lors de la génération du commentaire."); }
+      if (!data.comment) throw new Error("Réponse vide du serveur");
+      return data.comment;
+    };
+
+    let lastErr = "";
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const comment = await tryFetch(attempt);
+        setAiComment(stripMarkdown(comment));
+        setLoading(false);
+        return;
+      } catch(e) {
+        lastErr = e.message || String(e);
+        if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
+      }
+    }
+    setAiComment(`Erreur lors de la génération du commentaire (${lastErr}). Veuillez réessayer.`);
     setLoading(false);
   };
 
@@ -486,15 +513,6 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       setSheetStatus("ok");
     } catch { setSheetStatus("error"); }
   };
-
-  // Normalise les accents pour jsPDF (Helvetica ne supporte pas UTF-8 étendu)
-  const noPDF = (s) => s
-    .replace(/[àâä]/g,"a").replace(/[éèêë]/g,"e").replace(/[îï]/g,"i")
-    .replace(/[ôö]/g,"o").replace(/[ùûü]/g,"u").replace(/[ÀÂÄ]/g,"A")
-    .replace(/[ÉÈÊË]/g,"E").replace(/[ÎÏ]/g,"I").replace(/[ÔÖ]/g,"O")
-    .replace(/[ÙÛÜ]/g,"U").replace(/[ç]/g,"c").replace(/[Ç]/g,"C")
-    .replace(/[æ]/g,"ae").replace(/[œ]/g,"oe").replace(/[ñ]/g,"n")
-    .replace(/['/]/g,"'").replace(/[–—]/g,"-").replace(/[«»]/g,'"');
 
   const exportResult = async () => {
     await sendToSheets();
