@@ -184,7 +184,7 @@ const NutriScore = ({ avgScore }) => {
           }}>
             <span style={{
               color:"#fff", fontWeight:900,
-              fontSize: isActive ? 28 : 18,
+              fontSize: isActive ? 84 : 54,
               lineHeight:1,
             }}>{l.level}</span>
             {isActive && (
@@ -268,9 +268,13 @@ const drawRadarPDF = (doc, cx, cy, radius, themeScores, avgScore) => {
     const a = i * step - Math.PI / 2;
     return [cx+(radius*d.score/5)*Math.cos(a), cy+(radius*d.score/5)*Math.sin(a)];
   });
-  doc.setDrawColor(12,47,114); doc.setLineWidth(1.5);
+  doc.setDrawColor(12,47,114); doc.setLineWidth(0.75);
   for (let i=0; i<pts.length; i++) doc.line(pts[i][0], pts[i][1], pts[(i+1)%pts.length][0], pts[(i+1)%pts.length][1]);
-  pts.forEach(([x,y]) => { doc.setFillColor(12,47,114); doc.circle(x, y, 1.2, "F"); });
+  pts.forEach(([x,y], i) => {
+    doc.setFillColor(12,47,114); doc.circle(x, y, 1.2, "F");
+    doc.setFontSize(6.5); doc.setFont("helvetica","bold"); doc.setTextColor(12,47,114);
+    doc.text(`${themeScores[i].score}`, x+2, y-2);
+  });
 
   doc.setFontSize(8); doc.setFont("helvetica","bold");
   doc.setTextColor(lvlColor[0], lvlColor[1], lvlColor[2]);
@@ -641,7 +645,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
         }
         doc.roundedRect(nx, by, boxW, bh, isActive ? 3 : 2, isActive ? 3 : 2, "F");
         // Chiffre 0→5
-        doc.setFontSize(isActive ? 13 : 10);
+        doc.setFontSize(isActive ? 39 : 30);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(255, 255, 255);
         doc.text(`${l.level}`, nx + boxW / 2, by + (isActive ? 9 : 7), { align:"center" });
@@ -837,20 +841,6 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       });
       y += 6;
     });
-
-    // ── BLOC 1 : Coordonnees Aravis Performance (fond bleu, texte blanc) ────────
-    if (y + 28 > 280) { doc.addPage(); y = 20; }
-    doc.setFillColor(...blue);
-    doc.roundedRect(margin, y, contentW, 28, 3, 3, "F");
-    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-    doc.text("Jean-Baptiste FLECK - Fondateur Aravis Performance", margin+4, y+7);
-    doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(255,255,255);
-    doc.text("07 64 54 01 58",                        margin+4,  y+15);
-    doc.text("jbfleck@aravisperformance.com",          margin+4,  y+22);
-    doc.text("www.aravisperformance.com",              margin+90, y+15);
-    doc.text("Certifie QUALIOPI - Supply Chain Master", margin+90, y+22);
-
-    y += 28 + 12; // hauteur du bloc + espace entre les 2 blocs
 
     // ── BLOC 2 : Votre interlocuteur (fond bleu clair) ────────────────────────
     if (y + 90 > 285) { doc.addPage(); y = 20; }
@@ -1121,7 +1111,12 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
                 );
               }}/>
               <PolarRadiusAxis angle={30} domain={[0,5]} tick={{fontSize:9}} tickCount={6}/>
-              <Radar name="Score" dataKey="score" stroke={C1} fill={C1} fillOpacity={0.25} strokeWidth={2}/>
+              <Radar name="Score" dataKey="score" stroke={C1} fill={C1} fillOpacity={0.25} strokeWidth={1}
+                dot={{ r:3, fill:C1 }}
+                label={({ x, y, value }) => (
+                  <text x={x+4} y={y-4} fontSize={10} fontWeight={700} fill={C1} textAnchor="start">{value}</text>
+                )}
+              />
             </RadarChart>
           </ResponsiveContainer>
         </div>
@@ -1133,7 +1128,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           <ResponsiveContainer width="100%" height={360}>
             <BarChart data={barData} layout="vertical" margin={{ top:20,right:72,bottom:0,left:172 }}>
               <XAxis type="number" domain={[0,5]} tickCount={6} tick={{fontSize:10}}/>
-              <YAxis type="category" dataKey="theme" tick={{fontSize:11,fill:"#475569"}} width={167}/>
+              <YAxis type="category" dataKey="theme" tick={{fontSize:13,fill:"#475569"}} width={167}/>
               <Tooltip formatter={(v)=>[`${v}/5`,"Score"]}/>
               <Bar dataKey="score" radius={[0,6,6,0]}>
                 {barData.map((entry,i)=><Cell key={i} fill={getLevel(entry.score).color}/>)}
@@ -1151,7 +1146,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           </ResponsiveContainer>
           <div style={{ display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",marginTop:16 }}>
             {MATURITY_LEVELS.map(l=>(
-              <div key={l.level} style={{ display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#475569" }}>
+              <div key={l.level} style={{ display:"flex",alignItems:"center",gap:5,fontSize:16,color:"#475569" }}>
                 <div style={{ width:12,height:12,borderRadius:3,background:l.color }}/>
                 {l.level} — {l.label}
               </div>
@@ -1222,6 +1217,10 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
         <div style={{ background:C1,borderRadius:16,padding:28,marginBottom:20 }}>
           <h2 style={{ fontSize:15,fontWeight:600,color:"#fff",marginBottom:8 }}>Envie d'aller plus loin ?</h2>
           <p style={{ color:"#bfdbfe",fontSize:14,lineHeight:1.7,marginBottom:16 }}>Contactez Jean-Baptiste FLECK pour un audit supply chain complet ou ciblé sur une fonction prioritaire.</p>
+          <a href="https://aravisperformance.com/devis" target="_blank" rel="noopener noreferrer"
+            style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"rgba(255,255,255,0.15)",color:"#fff",borderRadius:10,padding:"12px 20px",fontSize:14,fontWeight:600,textDecoration:"none",marginBottom:12,border:"1px solid rgba(255,255,255,0.3)" }}>
+            💰 Évaluez le prix de votre devis en ligne, en totale autonomie →
+          </a>
           <a href="https://calendly.com/jbfleck/30min" target="_blank" rel="noopener noreferrer"
             style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"#fff",color:C1,borderRadius:10,padding:"14px 20px",fontSize:15,fontWeight:700,textDecoration:"none",marginBottom:16,boxShadow:"0 2px 12px rgba(0,0,0,0.18)" }}>
             📅 Prendre rendez-vous avec Jean-Baptiste
