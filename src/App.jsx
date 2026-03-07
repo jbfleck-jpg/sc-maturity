@@ -1,10 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Cell, Tooltip, ReferenceLine
 } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
+// ── Protections anti-copie ───────────────────────────────────────────────────
+const useAntiCopy = () => {
+  useEffect(() => {
+    // Désactiver la sélection de texte
+    const style = document.createElement("style");
+    style.innerHTML = `
+      * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+      }
+      input, textarea {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Bloquer le clic droit
+    const onContextMenu = (e) => e.preventDefault();
+    document.addEventListener("contextmenu", onContextMenu);
+
+    // Bloquer les raccourcis clavier de copie/impression
+    const onKeyDown = (e) => {
+      const blocked = (
+        (e.ctrlKey || e.metaKey) && ["c","C","a","A","p","P","s","S","u","U"].includes(e.key)
+      ) || e.key === "F12" || (e.ctrlKey && e.shiftKey && ["i","I","j","J","c","C"].includes(e.key));
+      if (blocked) e.preventDefault();
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    // Bloquer le drag & drop (empêche de glisser du texte)
+    const onDragStart = (e) => e.preventDefault();
+    document.addEventListener("dragstart", onDragStart);
+
+    return () => {
+      document.head.removeChild(style);
+      document.removeEventListener("contextmenu", onContextMenu);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("dragstart", onDragStart);
+    };
+  }, []);
+};
 
 const WEBHOOK_SHEETS     = "https://hook.eu1.make.com/mvkyqewrwl5dqkpas3q7n6dkaujrlyjr";
 const WEBHOOK_SEND_CODE  = "https://hook.eu1.make.com/wx9ax6kfm69gfgc13k85ttk46yc5hbqf";
@@ -316,6 +363,7 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
 
 // ── Main component ───────────────────────────────────────────────────────────
 export default function App() {
+  useAntiCopy();
   const [step, setStep]               = useState("intro");
   const [answers, setAnswers]         = useState({});
   const [current, setCurrent]         = useState(0);
