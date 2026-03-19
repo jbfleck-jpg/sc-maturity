@@ -344,7 +344,7 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
     // Barre strictement limitée à barAreaW
     const bw = Math.max(2, Math.min((barAreaW * item.score) / 5, barAreaW));
     const rgb = hexToRgb(getLevel(item.score).color);
-    doc.setFontSize(8); doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
+    doc.setFontSize(9); doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
     // Label thématique tronqué si nécessaire
     const words = item.theme.split(" ");
     const lines = []; let curr = "";
@@ -359,7 +359,7 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
     doc.roundedRect(startX+labelW, y, bw, barH, 1.5, 1.5, "F");
     // Score toujours dans les limites de la zone
     const scoreX = Math.min(startX+labelW+bw+3, startX+labelW+barAreaW+2);
-    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
+    doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
     doc.text(`${item.score}`, scoreX, y+barH-1);
     doc.setFont("helvetica","normal");
   });
@@ -369,7 +369,7 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
   MATURITY_LEVELS.forEach(l => {
     const rgb = hexToRgb(l.color);
     doc.setFillColor(...rgb); doc.rect(lx, legendY, 4, 4, "F");
-    doc.setFontSize(6.5); doc.setTextColor(60,60,60);
+    doc.setFontSize(8); doc.setTextColor(60,60,60);
     doc.text(`${l.level} - ${l.label}`, lx+5.5, legendY+3.5);
     lx += 34;
     if (lx > startX+chartW-10) lx = startX;
@@ -597,7 +597,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     // Aravis Performance + sous-titre
     doc.setFontSize(13); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
     doc.text("Aravis Performance", margin, 9);
-    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(147,197,253);
+    doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(147,197,253);
     doc.text("Rapport de maturite Supply Chain", margin, 14);
 
     // Badge INDICATIF
@@ -647,14 +647,14 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       doc.setFillColor(248,250,252); doc.roundedRect(kx, y, kpiW, 14, 2,2,"F");
       doc.setDrawColor(226,232,240); doc.setLineWidth(0.3);
       doc.roundedRect(kx, y, kpiW, 14, 2,2,"S");
-      doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+      doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
       doc.text(noPDF(k.val), kx+kpiW/2, y+8, { align:"center" });
-      doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
+      doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
       doc.text(k.lbl, kx+kpiW/2, y+12.5, { align:"center" });
     });
     y += 18;
 
-    // ── Score géant + NutriScore PDF — Option A ────────────────────────────────
+    // ── Score géant + NutriScore PDF — Option A recalculé ────────────────────
     {
       const curLevel = Math.floor(avgScore);
       const lvlColor = hexToRgb(level.color);
@@ -673,13 +673,18 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
 
       y += 18;
 
-      // ── NutriScore Option A : tablettes égales pleine largeur, padding 20% ──
+      // ── NutriScore Option A : tablettes pleine largeur, police 12pt minimum ──
+      // Police cible : 12pt pour inactif, 14pt pour actif
+      // Padding 20% : espace de chaque côté = 20% de la hauteur
+      // Hauteur minimale pour loger 12pt + 20% padding de chaque côté :
+      // h = fontSize / 0.6  → pour 12pt : h = 20mm, pour 14pt : h = 23mm
+      const fontNorm = 12;   // police minimale inactive
+      const fontActive = 14; // police active
+      const boxHnorm   = Math.ceil(fontNorm   / 0.6);  // ~20mm
+      const boxHactive = Math.ceil(fontActive  / 0.6);  // ~24mm
       const n = MATURITY_LEVELS.length;
-      const totalGap = 2.5 * (n - 1);
-      const boxW = (contentW - totalGap) / n;  // largeur dynamique
-      const boxHnorm = 12;
-      const boxHactive = 18;   // boîte active 50% plus haute
-      const pad = boxW * 0.20; // 20% padding intérieur
+      const gap = 2.5;
+      const boxW = (contentW - gap * (n - 1)) / n;
       const baseY = y;
 
       MATURITY_LEVELS.forEach((l) => {
@@ -687,9 +692,9 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
         const rgb = hexToRgb(l.color);
         const bh = isActive ? boxHactive : boxHnorm;
         const by = isActive ? baseY : baseY + (boxHactive - boxHnorm) / 2;
-        const nx = margin + l.level * (boxW + 2.5);
+        const nx = margin + l.level * (boxW + gap);
+        const padV = bh * 0.20; // 20% padding vertical
 
-        // Fond : couleur pleine si actif, atténué sinon
         if (isActive) {
           doc.setFillColor(...rgb);
         } else {
@@ -701,32 +706,30 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
         }
         doc.roundedRect(nx, by, boxW, bh, isActive ? 3 : 2, isActive ? 3 : 2, "F");
 
-        // Chiffre centré avec padding 20% — taille calculée depuis l'espace disponible
-        const innerH = bh - pad * 2;
-        const fontSize = isActive ? Math.min(innerH * 0.75, 10) : Math.min(innerH * 0.75, 7.5);
-        doc.setFontSize(fontSize);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(255, 255, 255);
-        // Centrage vertical : milieu de la boîte, ajusté pour le label si actif
+        // Chiffre avec 20% padding : position Y = bord haut + paddingV + ~60% de l'espace central
+        const innerH = bh - padV * 2;
+        const fs = isActive ? fontActive : fontNorm;
+        doc.setFontSize(fs);
+        doc.setFont("helvetica","bold");
+        doc.setTextColor(255,255,255);
         const textY = isActive
-          ? by + pad + innerH * 0.55
-          : by + bh / 2 + fontSize * 0.35;
+          ? by + padV + innerH * 0.52  // centré dans la zone intérieure, laisse place au label
+          : by + bh / 2 + fs * 0.30;   // parfaitement centré
         doc.text(`${l.level}`, nx + boxW / 2, textY, { align:"center" });
 
-        // Label sous le chiffre si actif
         if (isActive) {
-          doc.setFontSize(4.5); doc.setFont("helvetica","bold");
-          doc.setTextColor(255, 255, 255);
-          doc.text(noPDF(l.label), nx + boxW / 2, by + bh - pad * 0.8, { align:"center" });
+          doc.setFontSize(6.5); doc.setFont("helvetica","bold");
+          doc.setTextColor(255,255,255);
+          doc.text(noPDF(l.label), nx + boxW / 2, by + bh - padV * 0.6, { align:"center" });
         }
       });
-      y = baseY + boxHactive + 5;
+      y = baseY + boxHactive + 6;
     }
 
-    doc.setFontSize(6.5); doc.setFont("helvetica","italic"); doc.setTextColor(...gray);
+    doc.setFontSize(8.5); doc.setFont("helvetica","italic"); doc.setTextColor(...gray);
     doc.text("Niveau indicatif basé sur un nombre réduit d'informations, sans analyse complète du périmètre supply chain.", margin, y); y+=8;
 
-    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
+    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
     doc.text("Les 6 niveaux de maturité Supply Chain", margin, y); y+=5;
 
     MATURITY_LEVELS.forEach(l => {
@@ -752,7 +755,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       doc.setFillColor(...rgb); doc.circle(margin+4.5, y+bH/2, 3,"F");
 
       // Titre niveau
-      doc.setFontSize(8); doc.setFont("helvetica","bold");
+      doc.setFontSize(10); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?255:30, isCur?255:30, isCur?255:30);
       doc.text(`${l.level} - ${l.label}`, margin+11, y+5.5);
 
@@ -762,13 +765,13 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       }
 
       // Texte détail
-      doc.setFontSize(7); doc.setFont("helvetica","normal");
+      doc.setFontSize(9); doc.setFont("helvetica","normal");
       doc.setTextColor(isCur?240:60, isCur?240:60, isCur?240:60);
       doc.text(detailLines.map(noPDF), margin+11, y+11);
 
       // Mots-clés
       const kwY = y + 11 + detailLines.length * 4.2;
-      doc.setFontSize(6); doc.setFont("helvetica","bold");
+      doc.setFontSize(8); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?220:rgb[0], isCur?220:rgb[1], isCur?220:rgb[2]);
       doc.text(kwLines.map(noPDF), margin+11, kwY);
 
@@ -779,24 +782,31 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     // ── PAGE 2 : Scores (tableau gauche + radar droite) + Barchart ──────────
     doc.addPage(); y=20;
 
-    // ── Disposition 2 colonnes : tableau à gauche, radar à droite ───────────
-    const colTableW = 90; const colRadarW = contentW - colTableW - 6;
+    // ── Disposition 2 colonnes fixes : tableau à gauche, radar à droite ─────
+    const colTableW = 88; const colRadarW = contentW - colTableW - 8;
+    const col2StartY = y + 10; // Y de départ commun aux 2 colonnes
 
     // Titre tableau
-    doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 8, "F");
-    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Scores par thématique", margin+6, y+3); y+=8;
+    doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
+    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+    doc.text("Scores par thématique", margin+6, y+4);
 
-    // Tableau compact (colonne gauche)
+    // Titre radar
+    const radarColX = margin + colTableW + 8;
+    doc.setFillColor(...blue); doc.rect(radarColX, y-3, 3, 10, "F");
+    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+    doc.text("Radar par thématique", radarColX+6, y+4);
+
+    // Tableau compact (colonne gauche) — startY fixe
     autoTable(doc, {
-      startY:y, margin:{left:margin,right:margin},
+      startY: col2StartY, margin:{left:margin, right: pageW - margin - colTableW},
       tableWidth: colTableW,
       head:[["Thématique","Score","Niv."]],
       body:THEMES.map(t=>{ const s=themeScore(t); return [t,`${s}/5`,getLevel(s).label]; }),
-      styles:{fontSize:7.5,cellPadding:2,overflow:"linebreak"},
-      headStyles:{fillColor:blue,textColor:255,fontStyle:"bold",fontSize:7.5},
+      styles:{fontSize:9,cellPadding:2.5,overflow:"linebreak"},
+      headStyles:{fillColor:blue,textColor:255,fontStyle:"bold",fontSize:9},
       alternateRowStyles:{fillColor:[248,250,252]},
-      columnStyles:{0:{cellWidth:48},1:{cellWidth:20,halign:"center"},2:{cellWidth:22,halign:"center"}},
+      columnStyles:{0:{cellWidth:46},1:{cellWidth:20,halign:"center"},2:{cellWidth:22,halign:"center"}},
       didDrawCell:(data) => {
         if (data.section==="body" && data.column.index===1) {
           const s = parseFloat(data.cell.text[0]);
@@ -808,24 +818,21 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     });
     const tableEndY = doc.lastAutoTable.finalY;
 
-    // Radar (colonne droite, aligné avec le tableau)
-    const radarColX = margin + colTableW + 6;
-    const radarTitleY = y - 3;
-    doc.setFillColor(...blue); doc.rect(radarColX, radarTitleY, 3, 8, "F");
-    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Radar par thématique", radarColX+6, radarTitleY+5);
+    // Radar (colonne droite) — cy calculé pour rester dans la hauteur du tableau
+    const radarZoneH = tableEndY - col2StartY; // hauteur disponible = hauteur du tableau
+    const radarR = Math.min(38, (radarZoneH - 30) / 2); // rayon adapté
     const cx = radarColX + colRadarW/2;
-    const radarR = 38;
-    const cy = y + radarR + 18;
+    const cy = col2StartY + radarZoneH/2 + 5;
     drawRadarPDF(doc, cx, cy, radarR, THEMES.map(t=>({theme:t,score:themeScore(t)})), avgScore);
 
-    y = Math.max(tableEndY, cy + radarR + 20) + 6;
+    // Y après les 2 colonnes = max des deux
+    y = Math.max(tableEndY, cy + radarR + 8) + 10;
 
     // Barchart en dessous sur toute la largeur
     if (y + THEMES.length*14 + 30 > 280) { doc.addPage(); y=20; }
-    doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 8, "F");
-    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Classement par thématique", margin+6, y+3); y+=14;
+    doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
+    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+    doc.text("Classement par thématique", margin+6, y+4); y+=14;
     const barData_pdf = [...THEMES.map(t=>({theme:t,score:themeScore(t)}))].sort((a,b)=>a.score-b.score);
     drawBarChartPDF(doc, margin, y, contentW, barData_pdf, avgScore);
     y += barData_pdf.length*14+28;
@@ -833,13 +840,13 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     // ── PAGE 3 : Detail reponses ─────────────────────────────────────────────
     doc.addPage(); y=20;
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 8, "F");
-    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
     doc.text("Détail des réponses", margin+6, y+3); y+=10;
     autoTable(doc, {
       startY:y, margin:{left:margin,right:margin},
       head:[["#","Thématique","Réponse sélectionnée","Niv."]],
       body:QUESTIONS.map((q,i)=>[`Q${i+1}`,noPDF(q.theme),noPDF(q.options[qScore(i)]),qScore(i)]),
-      styles:{fontSize:7.5,cellPadding:2,overflow:"linebreak"},
+      styles:{fontSize:9,cellPadding:3,overflow:"linebreak"},
       headStyles:{fillColor:blue,textColor:255,fontStyle:"bold"},
       alternateRowStyles:{fillColor:[248,250,252]},
       columnStyles:{0:{cellWidth:10,halign:"center"},1:{cellWidth:38},2:{cellWidth:105},3:{cellWidth:10,halign:"center"}},
@@ -849,7 +856,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     doc.addPage(); y=20;
     // Header section style Option C
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
-    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+    doc.setFontSize(13); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
     doc.text("Analyse personnalisée", margin+6, y+5); y+=14;
 
     const sectionDefs = [
@@ -885,11 +892,11 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
 
       // Barre colorée gauche
       doc.setFillColor(...color); doc.rect(margin, y, 3, 5, "F");
-      doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...color);
+      doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(...color);
       doc.text(displayTitle, margin+6, y+4.5); y+=8;
 
       // Texte — splitTextToSize avec contentW réduit
-      doc.setFontSize(8.5); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
+      doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
       doc.text(lines, margin, y);
       y += lines.length * 4.5 + 7;
     });
@@ -897,7 +904,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     // ── PAGE 5 : Audit Supply Chain ─────────────────────────────────────────
     doc.addPage(); y=20;
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
-    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+    doc.setFontSize(13); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
     doc.text("Audit — Diagnostic Supply Chain", margin+6, y+5); y+=14;
 
     const auditPhases = [
@@ -922,9 +929,9 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
 
     auditPhases.forEach((phase, pi) => {
       if (y+30>280) { doc.addPage(); y=20; }
-      doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+      doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
       doc.text(phase.icon, margin, y); y+=6;
-      doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
+      doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
       phase.items.forEach(item => {
         const itemLines = doc.splitTextToSize("- " + item, contentW-6);
         if (y+itemLines.length*4.5>280) { doc.addPage(); y=20; }
@@ -952,10 +959,10 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     // Nom + titre
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
     doc.text("Jean-Baptiste FLECK", margin + 24, y + 8);
-    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
+    doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
     doc.text("Fondateur — Aravis Performance · Certifié QUALIOPI", margin + 24, y + 14);
     // Coordonnees dans la carte
-    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
+    doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
     doc.text("07 64 54 01 58",             margin + 24, y + 21);
     doc.text("jbfleck@aravisperformance.com", margin + 24, y + 27);
     doc.text("www.aravisperformance.com",   margin + 105, y + 21);
@@ -974,7 +981,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     ];
     const colW = contentW / 2 - 4;
     const rowH2 = 9;
-    doc.setFontSize(8); doc.setFont("helvetica","normal");
+    doc.setFontSize(10); doc.setFont("helvetica","normal");
     jbfItems.forEach((item, i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
@@ -995,7 +1002,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       doc.setPage(i);
       // Footer fond sombre style Option C
       doc.setFillColor(15,23,42); doc.rect(0,287,pageW,10,"F");
-      doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(100,116,139);
+      doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(100,116,139);
       doc.text("Aravis Performance  ·  jbfleck@aravisperformance.com  ·  07 64 54 01 58", margin, 293);
       doc.setTextColor(148,163,184);
       doc.text(`Page ${i} / ${pageCount}`, pageW-margin, 293, { align:"right" });
