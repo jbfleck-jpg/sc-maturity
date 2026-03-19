@@ -783,7 +783,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     doc.addPage(); y=20;
 
     // ── Disposition 2 colonnes fixes : tableau à gauche, radar à droite ─────
-    const colTableW = 88; const colRadarW = contentW - colTableW - 8;
+    const colTableW = 102; const colRadarW = contentW - colTableW - 8;
     const col2StartY = y + 10; // Y de départ commun aux 2 colonnes
 
     // Titre tableau
@@ -806,7 +806,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       styles:{fontSize:9,cellPadding:2.5,overflow:"linebreak"},
       headStyles:{fillColor:blue,textColor:255,fontStyle:"bold",fontSize:9},
       alternateRowStyles:{fillColor:[248,250,252]},
-      columnStyles:{0:{cellWidth:46},1:{cellWidth:20,halign:"center"},2:{cellWidth:22,halign:"center"}},
+      columnStyles:{0:{cellWidth:60, overflow:"linebreak"},1:{cellWidth:20,halign:"center"},2:{cellWidth:22,halign:"center"}},
       didDrawCell:(data) => {
         if (data.section==="body" && data.column.index===1) {
           const s = parseFloat(data.cell.text[0]);
@@ -901,8 +901,8 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       y += lines.length * 4.5 + 7;
     });
 
-    // ── PAGE 5 : Audit Supply Chain ─────────────────────────────────────────
-    doc.addPage(); y=20;
+    // ── PAGE 5 : Audit Supply Chain (même page que Prochaines étapes si possible) ──
+    if (y + 80 > 280) { doc.addPage(); y = 20; } else { y += 10; }
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
     doc.setFontSize(13); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
     doc.text("Audit — Diagnostic Supply Chain", margin+6, y+5); y+=14;
