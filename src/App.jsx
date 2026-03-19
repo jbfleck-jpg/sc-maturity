@@ -643,50 +643,57 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     });
     y += 18;
 
-    // ── NutriScore PDF ─────────────────────────────────────────────────────────
+    // ── Score géant + NutriScore PDF (style Option A) ──────────────────────────
     {
-      const ns = MATURITY_LEVELS;
       const curLevel = Math.floor(avgScore);
-      // Boîtes compactes centrées, polices grandes, chiffres 0→5
-      const boxW = 22; const boxGap = 3;
-      const boxHnorm = 14; const boxHactive = 20;
-      const totalNW = ns.length * boxW + (ns.length - 1) * boxGap;
-      let nx = margin + (contentW - totalNW) / 2;
+      const lvlColor = hexToRgb(level.color);
+
+      // Bloc score géant à gauche
+      const scoreBlockW = 55;
+      doc.setFontSize(32); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+      doc.text(`${avgScore}`, margin, y+12);
+      doc.setFontSize(14); doc.setFont("helvetica","normal"); doc.setTextColor(203,213,225);
+      doc.text("/5", margin+20, y+12);
+
+      // Badge niveau
+      doc.setFillColor(...lvlColor);
+      doc.roundedRect(margin+30, y+1, 38, 9, 3, 3, "F");
+      doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+      doc.text(noPDF(level.label), margin+49, y+7, { align:"center" });
+
+      // NutriScore compact à droite du score
+      const nsStartX = margin + scoreBlockW + 20;
+      const boxW = 18; const boxGap = 2.5;
+      const boxHnorm = 10; const boxHactive = 15;
       const baseY = y;
-      ns.forEach((l) => {
+      MATURITY_LEVELS.forEach((l) => {
         const isActive = l.level === curLevel;
         const rgb = hexToRgb(l.color);
         const bh = isActive ? boxHactive : boxHnorm;
         const by = isActive ? baseY : baseY + (boxHactive - boxHnorm) / 2;
-        // Fond coloré — PAS de GState (évite l'opacité globale du PDF)
+        const nx = nsStartX + l.level * (boxW + boxGap);
         if (isActive) {
           doc.setFillColor(...rgb);
         } else {
-          // Couleur atténuée manuellement (mélange avec blanc)
           doc.setFillColor(
-            Math.round(rgb[0] * 0.45 + 255 * 0.55),
-            Math.round(rgb[1] * 0.45 + 255 * 0.55),
-            Math.round(rgb[2] * 0.45 + 255 * 0.55)
+            Math.round(rgb[0] * 0.35 + 255 * 0.65),
+            Math.round(rgb[1] * 0.35 + 255 * 0.65),
+            Math.round(rgb[2] * 0.35 + 255 * 0.65)
           );
         }
-        doc.roundedRect(nx, by, boxW, bh, isActive ? 3 : 2, isActive ? 3 : 2, "F");
-        // Chiffre 0→5
-        doc.setFontSize(isActive ? 37 : 28);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(255, 255, 255);
-        doc.text(`${l.level}`, nx + boxW / 2, by + (isActive ? 9 : 7), { align:"center" });
-        // Label sous le chiffre si actif
+        doc.roundedRect(nx, by, boxW, bh, isActive ? 2.5 : 1.5, isActive ? 2.5 : 1.5, "F");
+        doc.setFontSize(isActive ? 9 : 7); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+        doc.text(`${l.level}`, nx + boxW/2, by + (isActive ? 7 : 5.5), { align:"center" });
         if (isActive) {
-          doc.setFontSize(5.5); doc.setFont("helvetica","normal");
-          doc.text(noPDF(l.label), nx + boxW / 2, by + bh - 2, { align:"center" });
+          doc.setFontSize(5); doc.setFont("helvetica","normal");
+          doc.text(noPDF(l.label), nx + boxW/2, by + bh - 1.5, { align:"center" });
         }
-        nx += boxW + boxGap;
       });
-      y = baseY + boxHactive + 5;
+      y = baseY + boxHactive + 6;
     }
 
     doc.setFontSize(6.5); doc.setFont("helvetica","italic"); doc.setTextColor(...gray);
-    doc.text("Niveau indicatif base sur un nombre reduit d'informations, sans analyse complete du perimetre supply chain.", margin, y); y+=7;
+    doc.text("Niveau indicatif base sur un nombre reduit d'informations, sans analyse complete du perimetre supply chain.", margin, y); y+=8;
 
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
     doc.text("Les 6 niveaux de maturite Supply Chain", margin, y); y+=5;
@@ -1092,18 +1099,23 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
         {sheetStatus==="ok"&&<div style={{ background:"#f0fdf4",borderRadius:10,padding:"10px 16px",marginBottom:16,fontSize:13,color:"#16a34a" }}>✅ Résultats enregistrés.</div>}
         {sheetStatus==="error"&&<div style={{ background:"#fff7ed",borderRadius:10,padding:"10px 16px",marginBottom:16,fontSize:13,color:"#ea580c" }}>⚠️ Erreur d'enregistrement.</div>}
 
-        {/* Score global */}
+        {/* Score global — Option A */}
         <div style={{ background:"#fff",borderRadius:16,padding:32,boxShadow:"0 4px 24px #0001",marginBottom:20,textAlign:"center" }}>
           <div style={{ fontSize:13,color:"#64748b",marginBottom:6 }}>Résultats pour <strong>{form.prenom} {form.nom}</strong> — {form.entreprise}</div>
-          <h1 style={{ fontSize:22,fontWeight:700,color:"#0f172a",marginBottom:8 }}>Maturité Supply Chain</h1>
-          <p style={{ fontSize:12,color:"#94a3b8",fontStyle:"italic",marginBottom:16 }}>Niveau indicatif, basé sur un nombre réduit d'informations et sans analyse du périmètre supply chain.</p>
-          {/* FIX 1: badge affiche Math.floor(avgScore) comme niveau, pas Math.round */}
-          <div style={{ display:"inline-block",background:level.color,color:"#fff",borderRadius:99,padding:"10px 28px",fontSize:20,fontWeight:700,marginBottom:12 }}>
-            Niveau {avgScore}/5 — {level.label}
+          <h1 style={{ fontSize:22,fontWeight:700,color:"#0f172a",marginBottom:4 }}>Maturité Supply Chain</h1>
+          <p style={{ fontSize:12,color:"#94a3b8",fontStyle:"italic",marginBottom:20 }}>Niveau indicatif, basé sur un nombre réduit d'informations et sans analyse du périmètre supply chain.</p>
+          {/* Score géant + badge niveau */}
+          <div style={{ display:"inline-flex",alignItems:"center",gap:16,marginBottom:16 }}>
+            <div style={{ display:"flex",alignItems:"baseline",gap:4 }}>
+              <span style={{ fontSize:56,fontWeight:900,color:C1,lineHeight:1 }}>{avgScore}</span>
+              <span style={{ fontSize:22,color:"#cbd5e1",fontWeight:400 }}>/5</span>
+            </div>
+            <div style={{ background:level.color,color:"#fff",borderRadius:20,padding:"6px 16px",fontSize:14,fontWeight:700 }}>
+              {level.label}
+            </div>
           </div>
-          <p style={{ color:"#64748b",fontSize:14,margin:"0 0 16px",lineHeight:1.7 }}>{level.detail}</p>
           <NutriScore avgScore={avgScore} />
-          <div style={{ background:"#eff6ff",borderRadius:8,padding:"10px 16px",fontSize:13,color:C1,marginTop:4,display:"inline-flex",alignItems:"center",gap:8 }}>
+          <div style={{ background:"#eff6ff",borderRadius:8,padding:"10px 16px",fontSize:13,color:C1,marginTop:16,display:"inline-flex",alignItems:"center",gap:8 }}>
             💡 <strong>Ce rapport est exportable en PDF</strong> — bouton rouge en bas de cette page.
           </div>
         </div>
