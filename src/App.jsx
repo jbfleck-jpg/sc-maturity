@@ -312,8 +312,9 @@ const noPDF = (s) => (s || "")
 
 const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
   const barH = 9; const gap = 5;
-  const labelW = 66; const scoreW = 14;
-  const barAreaW = chartW - labelW - scoreW - 6;
+  const labelW = 52;  // thématique plus courte
+  const scoreW = 18;  // score plus large
+  const barAreaW = chartW - labelW - scoreW - 8;
   const totalH = barData.length * (barH + gap);
 
   // Ligne de moyenne verticale
@@ -323,24 +324,24 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
   doc.line(avgX, startY-14, avgX, startY+totalH);
   doc.setLineDashPattern([], 0);
 
-  // Label "Moy." TOUJOURS à droite du trait (jamais chevauchant les barres)
+  // Label "Moy." à droite du trait, toujours dans les limites
   const maxLabelRight = startX + chartW - 2;
-  const labelRight = avgX + 2; // coller à droite du trait
-  const safeLabel = Math.min(labelRight, maxLabelRight - 14);
+  const safeLabel = Math.min(avgX + 2, maxLabelRight - 16);
   doc.setFontSize(7); doc.setTextColor(220,38,38); doc.setFont("helvetica","bold");
   doc.text(`Moy. ${avgScore}`, safeLabel, startY-16, { align:"left" });
   doc.setFont("helvetica","normal");
 
   barData.forEach((item, i) => {
     const y = startY + i*(barH+gap);
-    const bw = Math.max(2, (barAreaW * item.score) / 5);
+    // Barre strictement limitée à barAreaW
+    const bw = Math.max(2, Math.min((barAreaW * item.score) / 5, barAreaW));
     const rgb = hexToRgb(getLevel(item.score).color);
-    // Polices agrandies pour meilleure lisibilité
-    doc.setFontSize(8.5); doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
+    doc.setFontSize(8); doc.setTextColor(40,40,40); doc.setFont("helvetica","normal");
+    // Label thématique tronqué si nécessaire
     const words = item.theme.split(" ");
     const lines = []; let curr = "";
     words.forEach(w => {
-      if ((curr+" "+w).trim().length > 18) { if (curr) lines.push(curr); curr = w; }
+      if ((curr+" "+w).trim().length > 15) { if (curr) lines.push(curr); curr = w; }
       else curr = (curr+" "+w).trim();
     });
     if (curr) lines.push(curr);
@@ -348,19 +349,21 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
     else { doc.text(noPDF(lines[0]), startX, y+3); doc.text(noPDF(lines[1]||""), startX, y+barH); }
     doc.setFillColor(...rgb);
     doc.roundedRect(startX+labelW, y, bw, barH, 1.5, 1.5, "F");
-    doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
-    doc.text(`${item.score}`, startX+labelW+bw+3, y+barH-1);
+    // Score toujours dans les limites de la zone
+    const scoreX = Math.min(startX+labelW+bw+3, startX+labelW+barAreaW+2);
+    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(30,30,30);
+    doc.text(`${item.score}`, scoreX, y+barH-1);
     doc.setFont("helvetica","normal");
   });
 
-  const legendY = startY + totalH + 10;
+  const legendY = startY + totalH + 8;
   let lx = startX;
   MATURITY_LEVELS.forEach(l => {
     const rgb = hexToRgb(l.color);
     doc.setFillColor(...rgb); doc.rect(lx, legendY, 4, 4, "F");
-    doc.setFontSize(6); doc.setTextColor(60,60,60);
-    doc.text(`${l.level}-${noPDF(l.label)}`, lx+5, legendY+3.5);
-    lx += 32;
+    doc.setFontSize(6.5); doc.setTextColor(60,60,60);
+    doc.text(`${l.level} - ${l.label}`, lx+5.5, legendY+3.5);
+    lx += 34;
     if (lx > startX+chartW-10) lx = startX;
   });
 };
@@ -628,7 +631,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     const kpiW = (contentW-8)/3;
     const kpis = [
       { val:`${avgScore}/5`, lbl:"Score global" },
-      { val:`Niv. ${Math.floor(avgScore)}`, lbl:"Maturite" },
+      { val:`Niv. ${Math.floor(avgScore)}`, lbl:"Maturité" },
       { val:"18", lbl:"Questions" },
     ];
     kpis.forEach((k,i) => {
@@ -693,10 +696,10 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     }
 
     doc.setFontSize(6.5); doc.setFont("helvetica","italic"); doc.setTextColor(...gray);
-    doc.text("Niveau indicatif base sur un nombre reduit d'informations, sans analyse complete du perimetre supply chain.", margin, y); y+=8;
+    doc.text("Niveau indicatif basé sur un nombre réduit d'informations, sans analyse complète du périmètre supply chain.", margin, y); y+=8;
 
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
-    doc.text("Les 6 niveaux de maturite Supply Chain", margin, y); y+=5;
+    doc.text("Les 6 niveaux de maturité Supply Chain", margin, y); y+=5;
 
     MATURITY_LEVELS.forEach(l => {
       const rgb = hexToRgb(l.color);
@@ -723,7 +726,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       // Titre niveau
       doc.setFontSize(8); doc.setFont("helvetica","bold");
       doc.setTextColor(isCur?255:30, isCur?255:30, isCur?255:30);
-      doc.text(`${l.level} - ${noPDF(l.label)}`, margin+11, y+5.5);
+      doc.text(`${l.level} - ${l.label}`, margin+11, y+5.5);
 
       if (isCur) {
         doc.setFontSize(7); doc.setTextColor(255,255,255);
@@ -745,57 +748,68 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     });
     y += 3;
 
-    // ── PAGE 2 : Scores + Radar + Barchart ──────────────────────────────────
+    // ── PAGE 2 : Scores (tableau gauche + radar droite) + Barchart ──────────
     doc.addPage(); y=20;
 
-    // Titre style Option C : barre gauche + texte bold
-    doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 8, "F");
-    doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Scores par thematique", margin+6, y+3); y+=8;
+    // ── Disposition 2 colonnes : tableau à gauche, radar à droite ───────────
+    const colTableW = 90; const colRadarW = contentW - colTableW - 6;
 
+    // Titre tableau
+    doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 8, "F");
+    doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+    doc.text("Scores par thématique", margin+6, y+3); y+=8;
+
+    // Tableau compact (colonne gauche)
     autoTable(doc, {
       startY:y, margin:{left:margin,right:margin},
-      head:[["Thematique","Score","Niveau"]],
-      body:THEMES.map(t=>{ const s=themeScore(t); const rgb=hexToRgb(getLevel(s).color); return [noPDF(t),`${s} / 5`,noPDF(getLevel(s).label)]; }),
-      styles:{fontSize:9,cellPadding:3},
-      headStyles:{fillColor:blue,textColor:255,fontStyle:"bold"},
+      tableWidth: colTableW,
+      head:[["Thématique","Score","Niv."]],
+      body:THEMES.map(t=>{ const s=themeScore(t); return [t,`${s}/5`,getLevel(s).label]; }),
+      styles:{fontSize:7.5,cellPadding:2,overflow:"linebreak"},
+      headStyles:{fillColor:blue,textColor:255,fontStyle:"bold",fontSize:7.5},
       alternateRowStyles:{fillColor:[248,250,252]},
-      columnStyles:{0:{cellWidth:90},1:{cellWidth:25,halign:"center"},2:{cellWidth:45,halign:"center"}},
+      columnStyles:{0:{cellWidth:48},1:{cellWidth:20,halign:"center"},2:{cellWidth:22,halign:"center"}},
       didDrawCell:(data) => {
         if (data.section==="body" && data.column.index===1) {
           const s = parseFloat(data.cell.text[0]);
           const rgb = hexToRgb(getLevel(s).color);
           doc.setFillColor(...rgb);
-          doc.roundedRect(data.cell.x+2, data.cell.y+data.cell.height-3, (data.cell.width-4)*(s/5), 1.5, 0.5,0.5,"F");
+          doc.roundedRect(data.cell.x+1, data.cell.y+data.cell.height-2.5, (data.cell.width-2)*(s/5), 1.5, 0.5,0.5,"F");
         }
       }
     });
-    y = doc.lastAutoTable.finalY+12;
+    const tableEndY = doc.lastAutoTable.finalY;
 
-    if (y+145>280) { doc.addPage(); y=20; }
-    doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 8, "F");
+    // Radar (colonne droite, aligné avec le tableau)
+    const radarColX = margin + colTableW + 6;
+    const radarTitleY = y - 3;
+    doc.setFillColor(...blue); doc.rect(radarColX, radarTitleY, 3, 8, "F");
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Radar par thematique", margin+6, y+3); y+=9;
-    const cx=pageW/2; const cy=y+62; const radarR=47;
+    doc.text("Radar par thématique", radarColX+6, radarTitleY+5);
+    const cx = radarColX + colRadarW/2;
+    const radarR = 38;
+    const cy = y + radarR + 18;
     drawRadarPDF(doc, cx, cy, radarR, THEMES.map(t=>({theme:t,score:themeScore(t)})), avgScore);
-    y = cy+radarR+30;
 
-    if (y+barData.length*14+46>280) { doc.addPage(); y=20; }
+    y = Math.max(tableEndY, cy + radarR + 20) + 6;
+
+    // Barchart en dessous sur toute la largeur
+    if (y + THEMES.length*14 + 30 > 280) { doc.addPage(); y=20; }
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 8, "F");
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Scores par thematique (classement)", margin+6, y+3); y+=14;
+    doc.text("Classement par thématique", margin+6, y+3); y+=14;
     const barData_pdf = [...THEMES.map(t=>({theme:t,score:themeScore(t)}))].sort((a,b)=>a.score-b.score);
     drawBarChartPDF(doc, margin, y, contentW, barData_pdf, avgScore);
-    y += barData_pdf.length*13+28;
+    y += barData_pdf.length*14+28;
 
     // ── PAGE 3 : Detail reponses ─────────────────────────────────────────────
     doc.addPage(); y=20;
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 8, "F");
     doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Detail des reponses", margin+6, y+3); y+=10;
+    doc.text("Détail des réponses", margin+6, y+3); y+=10;
     autoTable(doc, {
       startY:y, margin:{left:margin,right:margin},
-      head:[["#","Thematique","Reponse selectionnee","Niv."]],
+      head:[["#","Thématique","Réponse sélectionnée","Niv."]],
       body:QUESTIONS.map((q,i)=>[`Q${i+1}`,noPDF(q.theme),noPDF(q.options[qScore(i)]),qScore(i)]),
       styles:{fontSize:7.5,cellPadding:2,overflow:"linebreak"},
       headStyles:{fillColor:blue,textColor:255,fontStyle:"bold"},
@@ -808,7 +822,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     // Header section style Option C
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
     doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Analyse personnalisee", margin+6, y+5); y+=14;
+    doc.text("Analyse personnalisée", margin+6, y+5); y+=14;
 
     const sectionDefs = [
       { title:"VOTRE NIVEAU DE MATURITE", color:[12,47,114],  text:aiSections?.maturityLevel||"" },
@@ -819,11 +833,11 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     ];
 
     const sectionLabels = {
-      "VOTRE NIVEAU DE MATURITE": "Votre niveau de maturite",
-      "POINTS FORTS":             "Points forts",
-      "POINTS D'AMELIORATION":    "Points d'amelioration",
-      "RECOMMANDATIONS":          "Recommandations",
-      "PROCHAINES ETAPES":        "Prochaines etapes",
+      "VOTRE NIVEAU DE MATURITE": "Votre niveau de maturité",
+      "POINTS FORTS": "Points forts",
+      "POINTS D'AMELIORATION":    "Points d'amélioration",
+      "RECOMMANDATIONS": "Recommandations",
+      "PROCHAINES ETAPES": "Prochaines étapes",
     };
 
     // FIX 2b: Textes IA PDF — contentW réduit + saut de page systématique + hauteur estimée avant dessin
@@ -856,25 +870,25 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     doc.addPage(); y=20;
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
     doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Audit - Diagnostic Supply Chain", margin+6, y+5); y+=14;
+    doc.text("Audit — Diagnostic Supply Chain", margin+6, y+5); y+=14;
 
     const auditPhases = [
       {
-        icon:"Phase terrain (1 a 5 jours par site audite)",
+        icon:"Phase terrain (1 à 5 jours par site audité)",
         items:["Collecte des elements pour identifier le niveau de maturite et comprendre le fonctionnement actuel de la Supply Chain."],
       },
       {
         icon:"Diagnostic",
         items:[
-          "Evaluation complete du niveau de maturite.",
+          "Évaluation complète du niveau de maturité.",
           "Recherche des causes de performance et de non-performance.",
-          "Redaction d'un rapport d'audit complet de plus de 20 pages.",
-          "Construction d'une feuille de route avec 3 a 5 projets pour ameliorer la maturite de l'entreprise.",
+          "Rédaction d'un rapport d'audit complet de plus de 20 pages.",
+          "Construction d'une feuille de route avec 3 à 5 projets pour améliorer la maturité de l'entreprise.",
         ],
       },
       {
         icon:"Restitution (1/2 journee)",
-        items:["Presentation des conclusions du rapport d'audit et echanges avec le CODIR."],
+        items:["Présentation des conclusions du rapport d'audit et échanges avec le CODIR."],
       },
     ];
 
@@ -911,24 +925,24 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(...dark);
     doc.text("Jean-Baptiste FLECK", margin + 24, y + 8);
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...gray);
-    doc.text("Fondateur - Aravis Performance - Certifie QUALIOPI", margin + 24, y + 14);
+    doc.text("Fondateur — Aravis Performance · Certifié QUALIOPI", margin + 24, y + 14);
     // Coordonnees dans la carte
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...dark);
     doc.text("07 64 54 01 58",             margin + 24, y + 21);
     doc.text("jbfleck@aravisperformance.com", margin + 24, y + 27);
     doc.text("www.aravisperformance.com",   margin + 105, y + 21);
-    doc.text("Certifie QUALIOPI",           margin + 105, y + 27);
+    doc.text("Certifié QUALIOPI",           margin + 105, y + 27);
 
     y += cardH2 + 8;
 
     // Items expertise en 2 colonnes
     const jbfItems = [
-      "25 ans d'experience en Supply Chain & Excellence Operationnelle",
-      "Plus de 20 audits-diagnostics realises en 5 ans",
-      "Auditeur certifie France Supply Chain & Supply Chain Master",
-      "Maitrise des referentiels MMOG/LE et Supply Chain Plus",
+      "25 ans d'expérience en Supply Chain & Excellence Opérationnelle",
+      "Plus de 20 audits-diagnostics réalisés en 5 ans",
+      "Auditeur certifié France Supply Chain & Supply Chain Master",
+      "Maîtrise des référentiels MMOG/LE et Supply Chain Plus",
       "Black Belt Lean 6 Sigma",
-      "CPIM - Certified in Planning and Inventory Management",
+      "CPIM — Certified in Planning and Inventory Management",
     ];
     const colW = contentW / 2 - 4;
     const rowH2 = 9;
@@ -1107,7 +1121,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           {/* Score géant + badge niveau */}
           <div style={{ display:"inline-flex",alignItems:"center",gap:16,marginBottom:16 }}>
             <div style={{ display:"flex",alignItems:"baseline",gap:4 }}>
-              <span style={{ fontSize:56,fontWeight:900,color:C1,lineHeight:1 }}>{avgScore}</span>
+              <span style={{ fontSize:42,fontWeight:900,color:C1,lineHeight:1 }}>{avgScore}</span>
               <span style={{ fontSize:22,color:"#cbd5e1",fontWeight:400 }}>/5</span>
             </div>
             <div style={{ background:level.color,color:"#fff",borderRadius:20,padding:"6px 16px",fontSize:14,fontWeight:700 }}>
