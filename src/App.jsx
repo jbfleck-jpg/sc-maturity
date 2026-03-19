@@ -783,7 +783,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     doc.addPage(); y=20;
 
     // ── Disposition 2 colonnes fixes : tableau à gauche, radar à droite ─────
-    const colTableW = 102; const colRadarW = contentW - colTableW - 8;
+    const colTableW = 85; const colRadarW = contentW - colTableW - 8;
     const col2StartY = y + 10; // Y de départ commun aux 2 colonnes
 
     // Titre tableau
@@ -806,7 +806,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       styles:{fontSize:9,cellPadding:2.5,overflow:"linebreak"},
       headStyles:{fillColor:blue,textColor:255,fontStyle:"bold",fontSize:9},
       alternateRowStyles:{fillColor:[248,250,252]},
-      columnStyles:{0:{cellWidth:60, overflow:"linebreak"},1:{cellWidth:20,halign:"center"},2:{cellWidth:22,halign:"center"}},
+      columnStyles:{0:{cellWidth:43, overflow:"linebreak"},1:{cellWidth:20,halign:"center"},2:{cellWidth:22,halign:"center"}},
       didDrawCell:(data) => {
         if (data.section==="body" && data.column.index===1) {
           const s = parseFloat(data.cell.text[0]);
@@ -849,7 +849,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
       styles:{fontSize:9,cellPadding:3,overflow:"linebreak"},
       headStyles:{fillColor:blue,textColor:255,fontStyle:"bold"},
       alternateRowStyles:{fillColor:[248,250,252]},
-      columnStyles:{0:{cellWidth:10,halign:"center"},1:{cellWidth:38},2:{cellWidth:105},3:{cellWidth:10,halign:"center"}},
+      columnStyles:{0:{cellWidth:14,halign:"center"},1:{cellWidth:36},2:{cellWidth:103},3:{cellWidth:10,halign:"center"}},
     });
 
     // ── PAGE 4 : Analyse ────────────────────────────────────────────────────
