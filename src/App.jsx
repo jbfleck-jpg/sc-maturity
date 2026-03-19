@@ -1022,16 +1022,20 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           </div>
           <div style={{ background:"#eff6ff", borderLeft:`4px solid ${C1}`, borderRadius:"0 10px 10px 0", padding:"18px 20px", marginBottom:20 }}>
             <p style={{ color:"#1e3a6e", fontSize:14, lineHeight:1.8, margin:0 }}>Cette auto-évaluation vous permettra de répondre à des questions relatives à votre supply chain. À l'issue du questionnaire, vous disposerez d'un <strong>aperçu sur le niveau potentiel de maturité "Supply Chain" de votre entreprise à titre indicatif</strong>.</p>
-            <p style={{ color:"#1e3a6e", fontSize:14, lineHeight:1.8, margin:"12px 0 0 0" }}><strong>Ne prenez pas le résultat de ce questionnaire à la lettre.</strong> Un audit complet conduit par un professionnel reste nécessaire pour une analyse rigoureuse, contextualisée à votre stratégie, votre marché et votre organisation. Les audits supply chain du marché contiennent généralement <strong>entre 150 et 200 questions</strong>.</p>
+            <p style={{ color:"#1e3a6e", fontSize:14, lineHeight:1.8, margin:"12px 0 0 0" }}><strong>Ne prenez pas le résultat de ce questionnaire à la lettre.</strong> Un audit complet conduit par un professionnel reste nécessaire pour une analyse rigoureuse, contextualisée à votre stratégie, votre marché et votre organisation. Les référentiels du marché comptent généralement <strong>entre 150 et 200 points de contrôle</strong>.</p>
             <p style={{ color:"#1e3a6e", fontSize:14, lineHeight:1.8, margin:"12px 0 0 0" }}>À l'issue de ce questionnaire, vous disposerez d'une <strong>notation par chapitre</strong>, d'une <strong>notation globale</strong> et d'un <strong>commentaire de notre expert</strong>.</p>
           </div>
           <div style={{ background:"#f1f5f9", borderRadius:10, padding:"12px 16px", marginBottom:20, fontSize:13, color:"#475569", display:"flex", gap:10 }}>
             <span style={{ fontSize:18 }}>📋</span>
             <span><strong>18 questions structurantes</strong> réparties sur <strong>9 thématiques</strong>. Comptez <strong>10 à 15 minutes</strong>.</span>
           </div>
-          <div style={{ background:"#fff7ed", borderLeft:"4px solid #ea580c", borderRadius:"0 10px 10px 0", padding:"12px 18px", marginBottom:28 }}>
-            <p style={{ color:"#9a3412", fontSize:13, lineHeight:1.8, margin:0 }}>⚠️ <strong>Important :</strong> le diagnostic et la feuille de route nécessitent l'intervention d'un expert en situation réelle.</p>
+          <div style={{ background:"#fff7ed", borderLeft:"4px solid #ea580c", borderRadius:"0 10px 10px 0", padding:"16px 20px", marginBottom:20 }}>
+            <p style={{ color:"#9a3412", fontSize:13, lineHeight:1.9, margin:0 }}>
+              ⚠️ <strong>Important :</strong> le diagnostic et la feuille de route ne sont <strong>pas compris</strong> dans cette auto-évaluation — ils nécessitent l'intervention d'un expert en situation réelle.<br/><br/>
+              Par ailleurs, les auto-évaluations ont tendance à contenir des <strong>biais cognitifs</strong> qui conduisent à des résultats <strong>pessimistes ou optimistes</strong> selon le profil et la position de l'évaluateur dans l'organisation. Un auditeur professionnel a un <strong>devoir de neutralité</strong> qui garantit une analyse objective et impartiale.
+            </p>
           </div>
+          <button style={{...btn(true), marginBottom:28}} onClick={()=>setStep("quiz")}>Démarrer l'auto-évaluation →</button>
           <div style={{ marginBottom:28 }}>
             <h2 style={{ fontSize:16, fontWeight:700, color:C1, marginBottom:14 }}>Les 6 niveaux de maturité Supply Chain</h2>
             {MATURITY_LEVELS.map(l=>(
