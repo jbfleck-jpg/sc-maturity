@@ -165,30 +165,38 @@ const getLevel = (s) => MATURITY_LEVELS.find(l => l.level === Math.min(Math.floo
 const NutriScore = ({ avgScore }) => {
   const levels = MATURITY_LEVELS;
   const currentLevel = Math.floor(avgScore);
-  const w = 44; const wActive = 62; const h = 48; const hActive = 68;
+  // Option D : tablettes égales, active légèrement plus haute avec label
+  // Padding 20% = 1/5 de la dimension pour laisser de l'air autour du chiffre
+  const baseW = 52; const baseH = 44;
+  const activeH = 60;
+  const pad = baseW * 0.20; // 20% padding
   return (
     <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"center", gap:5, margin:"16px 0" }}>
       {levels.map((l) => {
         const isActive = l.level === currentLevel;
+        // Taille de police = hauteur disponible après padding * 0.55
+        const innerH = (isActive ? activeH : baseH) - pad * 2;
+        const fontSize = isActive ? Math.floor(innerH * 0.55) : Math.floor(innerH * 0.55);
         return (
           <div key={l.level} style={{
-            width: isActive ? wActive : w,
-            height: isActive ? hActive : h,
+            width: baseW,
+            height: isActive ? activeH : baseH,
             background: l.color,
-            borderRadius: isActive ? 12 : 7,
+            borderRadius: isActive ? 10 : 8,
             display:"flex", flexDirection:"column",
             alignItems:"center", justifyContent:"center",
-            boxShadow: isActive ? `0 6px 20px ${l.color}99` : "none",
+            padding: `${pad}px`,
+            boxShadow: isActive ? `0 4px 16px ${l.color}88` : "none",
             transition:"all 0.3s",
-            opacity: isActive ? 1 : 0.4,
+            opacity: isActive ? 1 : 0.35,
           }}>
             <span style={{
               color:"#fff", fontWeight:900,
-              fontSize: isActive ? 82 : 52,
+              fontSize: fontSize,
               lineHeight:1,
             }}>{l.level}</span>
             {isActive && (
-              <span style={{ color:"#fff", fontSize:10, fontWeight:700, marginTop:4, opacity:0.95, letterSpacing:0.5 }}>
+              <span style={{ color:"#fff", fontSize:9, fontWeight:700, marginTop:4, opacity:0.95, letterSpacing:0.3, textAlign:"center" }}>
                 {l.label}
               </span>
             )}
@@ -646,13 +654,12 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     });
     y += 18;
 
-    // ── Score géant + NutriScore PDF (style Option A) ──────────────────────────
+    // ── Score géant + NutriScore PDF — Option A ────────────────────────────────
     {
       const curLevel = Math.floor(avgScore);
       const lvlColor = hexToRgb(level.color);
 
-      // Bloc score géant à gauche
-      const scoreBlockW = 55;
+      // Score géant à gauche
       doc.setFontSize(32); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
       doc.text(`${avgScore}`, margin, y+12);
       doc.setFontSize(14); doc.setFont("helvetica","normal"); doc.setTextColor(203,213,225);
@@ -660,39 +667,60 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
 
       // Badge niveau
       doc.setFillColor(...lvlColor);
-      doc.roundedRect(margin+30, y+1, 38, 9, 3, 3, "F");
-      doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-      doc.text(noPDF(level.label), margin+49, y+7, { align:"center" });
+      doc.roundedRect(margin+30, y+1, 40, 10, 3, 3, "F");
+      doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+      doc.text(noPDF(level.label), margin+50, y+7.5, { align:"center" });
 
-      // NutriScore compact à droite du score
-      const nsStartX = margin + scoreBlockW + 20;
-      const boxW = 18; const boxGap = 2.5;
-      const boxHnorm = 10; const boxHactive = 15;
+      y += 18;
+
+      // ── NutriScore Option A : tablettes égales pleine largeur, padding 20% ──
+      const n = MATURITY_LEVELS.length;
+      const totalGap = 2.5 * (n - 1);
+      const boxW = (contentW - totalGap) / n;  // largeur dynamique
+      const boxHnorm = 12;
+      const boxHactive = 18;   // boîte active 50% plus haute
+      const pad = boxW * 0.20; // 20% padding intérieur
       const baseY = y;
+
       MATURITY_LEVELS.forEach((l) => {
         const isActive = l.level === curLevel;
         const rgb = hexToRgb(l.color);
         const bh = isActive ? boxHactive : boxHnorm;
         const by = isActive ? baseY : baseY + (boxHactive - boxHnorm) / 2;
-        const nx = nsStartX + l.level * (boxW + boxGap);
+        const nx = margin + l.level * (boxW + 2.5);
+
+        // Fond : couleur pleine si actif, atténué sinon
         if (isActive) {
           doc.setFillColor(...rgb);
         } else {
           doc.setFillColor(
-            Math.round(rgb[0] * 0.35 + 255 * 0.65),
-            Math.round(rgb[1] * 0.35 + 255 * 0.65),
-            Math.round(rgb[2] * 0.35 + 255 * 0.65)
+            Math.round(rgb[0] * 0.30 + 255 * 0.70),
+            Math.round(rgb[1] * 0.30 + 255 * 0.70),
+            Math.round(rgb[2] * 0.30 + 255 * 0.70)
           );
         }
-        doc.roundedRect(nx, by, boxW, bh, isActive ? 2.5 : 1.5, isActive ? 2.5 : 1.5, "F");
-        doc.setFontSize(isActive ? 9 : 7); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
-        doc.text(`${l.level}`, nx + boxW/2, by + (isActive ? 7 : 5.5), { align:"center" });
+        doc.roundedRect(nx, by, boxW, bh, isActive ? 3 : 2, isActive ? 3 : 2, "F");
+
+        // Chiffre centré avec padding 20% — taille calculée depuis l'espace disponible
+        const innerH = bh - pad * 2;
+        const fontSize = isActive ? Math.min(innerH * 0.75, 10) : Math.min(innerH * 0.75, 7.5);
+        doc.setFontSize(fontSize);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255, 255, 255);
+        // Centrage vertical : milieu de la boîte, ajusté pour le label si actif
+        const textY = isActive
+          ? by + pad + innerH * 0.55
+          : by + bh / 2 + fontSize * 0.35;
+        doc.text(`${l.level}`, nx + boxW / 2, textY, { align:"center" });
+
+        // Label sous le chiffre si actif
         if (isActive) {
-          doc.setFontSize(5); doc.setFont("helvetica","normal");
-          doc.text(noPDF(l.label), nx + boxW/2, by + bh - 1.5, { align:"center" });
+          doc.setFontSize(4.5); doc.setFont("helvetica","bold");
+          doc.setTextColor(255, 255, 255);
+          doc.text(noPDF(l.label), nx + boxW / 2, by + bh - pad * 0.8, { align:"center" });
         }
       });
-      y = baseY + boxHactive + 6;
+      y = baseY + boxHactive + 5;
     }
 
     doc.setFontSize(6.5); doc.setFont("helvetica","italic"); doc.setTextColor(...gray);
