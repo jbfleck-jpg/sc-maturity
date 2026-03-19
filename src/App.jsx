@@ -1109,7 +1109,7 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
           {[{key:"prenom",label:"Prénom *",type:"text"},{key:"nom",label:"Nom *",type:"text"},{key:"entreprise",label:"Entreprise *",type:"text"},{key:"email",label:"Email professionnel *",type:"email"}].map(f=>(
             <div key={f.key} style={{ marginBottom:14 }}>
               <label style={{ fontSize:13,fontWeight:600,color:"#374151",display:"block",marginBottom:5 }}>{f.label}</label>
-              <input type={f.type} value={form[f.key]} onChange={e=>setForm({...form,[f.key]:e.target.value})}
+              <input type={f.type} value={form[f.key]} onChange={e=>setForm({...form,[f.key]:f.key==="email"?e.target.value.toLowerCase():e.target.value})}
                 style={{ width:"100%",border:`2px solid ${f.key==="email"&&emailErr?"#dc2626":"#e2e8f0"}`,borderRadius:8,padding:"10px 14px",fontSize:14,outline:"none",boxSizing:"border-box" }} />
             </div>
           ))}
