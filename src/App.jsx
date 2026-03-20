@@ -54,9 +54,9 @@ const useAntiCopy = () => {
 };
 
 const WEBHOOK_SHEETS     = "https://hook.eu1.make.com/mvkyqewrwl5dqkpas3q7n6dkaujrlyjr";
-const WEBHOOK_SEND_CODE  = "https://hook.eu1.make.com/e2i9miebiorxkvlew05ca54ed1xlkmuy";
+const WEBHOOK_SEND_CODE  = "https://hook.eu1.make.com/4faf2irkquq8czfzvrihsf58easf10lj";
 const WEBHOOK_CHECK_CODE = "https://hook.eu1.make.com/8rfm5s2uyj7x9frfh33bbvmflejqps8m";
-const WEBHOOK_NOTIFY     = "https://hook.eu1.make.com/oy47delx1iom8lw8qrn14yqds2u8xn89";
+const WEBHOOK_NOTIFY     = "https://hook.eu1.make.com/kctil9dlcjxp2gv1urswvbi11lmyxi6l";
 const WORKER_AI_URL      = "https://sc-maturity-ai.jbfleck.workers.dev";
 const CALENDLY_URL       = "https://calendly.com/jbfleck/30min";
 
