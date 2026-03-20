@@ -779,56 +779,46 @@ Invite chaleureusement a contacter Aravis Performance pour un audit complet ou c
     });
     y += 3;
 
-    // ── PAGE 2 : Scores (tableau gauche + radar droite) + Barchart ──────────
+    // ── PAGE 2 : Tableau des scores pleine largeur ──────────────────────────
     doc.addPage(); y=20;
 
-    // ── Disposition 2 colonnes fixes : tableau à gauche, radar à droite ─────
-    const colTableW = 85; const colRadarW = contentW - colTableW - 8;
-    const col2StartY = y + 10; // Y de départ commun aux 2 colonnes
-
-    // Titre tableau
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
     doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Scores par thématique", margin+6, y+4);
+    doc.text("Scores par thématique", margin+6, y+4); y+=10;
 
-    // Titre radar
-    const radarColX = margin + colTableW + 8;
-    doc.setFillColor(...blue); doc.rect(radarColX, y-3, 3, 10, "F");
-    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
-    doc.text("Radar par thématique", radarColX+6, y+4);
-
-    // Tableau compact (colonne gauche) — startY fixe
+    // Tableau pleine largeur — aucun risque de chevauchement
     autoTable(doc, {
-      startY: col2StartY, margin:{left:margin, right: pageW - margin - colTableW},
-      tableWidth: colTableW,
-      head:[["Thématique","Score","Niv."]],
+      startY: y, margin:{left:margin, right:margin},
+      head:[["Thématique","Score","Niveau"]],
       body:THEMES.map(t=>{ const s=themeScore(t); return [t,`${s}/5`,getLevel(s).label]; }),
-      styles:{fontSize:9,cellPadding:2.5,overflow:"linebreak"},
-      headStyles:{fillColor:blue,textColor:255,fontStyle:"bold",fontSize:9},
+      styles:{fontSize:10, cellPadding:3, overflow:"linebreak"},
+      headStyles:{fillColor:blue, textColor:255, fontStyle:"bold", fontSize:10},
       alternateRowStyles:{fillColor:[248,250,252]},
-      columnStyles:{0:{cellWidth:43, overflow:"linebreak"},1:{cellWidth:20,halign:"center"},2:{cellWidth:22,halign:"center"}},
+      columnStyles:{0:{cellWidth:100},1:{cellWidth:30,halign:"center"},2:{cellWidth:40,halign:"center"}},
       didDrawCell:(data) => {
         if (data.section==="body" && data.column.index===1) {
           const s = parseFloat(data.cell.text[0]);
           const rgb = hexToRgb(getLevel(s).color);
           doc.setFillColor(...rgb);
-          doc.roundedRect(data.cell.x+1, data.cell.y+data.cell.height-2.5, (data.cell.width-2)*(s/5), 1.5, 0.5,0.5,"F");
+          doc.roundedRect(data.cell.x+2, data.cell.y+data.cell.height-3, (data.cell.width-4)*(s/5), 2, 0.5,0.5,"F");
         }
       }
     });
-    const tableEndY = doc.lastAutoTable.finalY;
+    y = doc.lastAutoTable.finalY + 14;
 
-    // Radar (colonne droite) — cy calculé pour rester dans la hauteur du tableau
-    const radarZoneH = tableEndY - col2StartY; // hauteur disponible = hauteur du tableau
-    const radarR = Math.min(38, (radarZoneH - 30) / 2); // rayon adapté
-    const cx = radarColX + colRadarW/2;
-    const cy = col2StartY + radarZoneH/2 + 5;
+    // Radar centré sur toute la largeur
+    if (y + 110 > 280) { doc.addPage(); y=20; }
+    doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
+    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
+    doc.text("Radar par thématique", margin+6, y+4); y+=10;
+
+    const cx = pageW/2;
+    const radarR = 44;
+    const cy = y + radarR + 14;
     drawRadarPDF(doc, cx, cy, radarR, THEMES.map(t=>({theme:t,score:themeScore(t)})), avgScore);
+    y = cy + radarR + 18;
 
-    // Y après les 2 colonnes = max des deux
-    y = Math.max(tableEndY, cy + radarR + 8) + 10;
-
-    // Barchart en dessous sur toute la largeur
+    // Barchart
     if (y + THEMES.length*14 + 30 > 280) { doc.addPage(); y=20; }
     doc.setFillColor(...blue); doc.rect(margin, y-3, 3, 10, "F");
     doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...blue);
