@@ -505,11 +505,15 @@ Reduction des couts logistiques : 25 a 40 %
 (9 a 10 lignes en tout pour ce paragraphe)
 
 PARAGRAPHE 5 - titre : PROCHAINES ETAPES
-Explique les avantages concrets d'un audit-diagnostic terrain par rapport a cette auto-evaluation.
-Insiste sur la necessite d'aller plus loin pour identifier davantage de points forts et d'axes d'amelioration.
-Rappelle qu'un audit complet contient entre 150 et 200 questions par domaine.
-Invite chaleureusement a contacter Aravis Performance pour un audit complet ou cible sur une fonction prioritaire.
-(5 a 6 phrases)`;
+Redige ce paragraphe en respectant EXACTEMENT les points suivants, dans cet ordre, en prose fluide :
+1. Viser le prochain niveau de maturite en ameliorant en priorite les processus les plus vulnerables identifies dans ce rapport.
+2. Progresser par paliers : une fois le niveau actuel consolide, viser le niveau suivant. Ces demarches sont longues et necessitent des investissements humains, financiers et les expertises adaptees.
+3. Si necessaire, approfondir les thematiques vulnerables. Aravis Performance propose des audits cibles sur des fonctions specifiques avec une cinquantaine de points de controle sur les processus posant des difficultes.
+4. Construire une feuille de route adaptee aux capacites d'investissement financieres, humaines et aux expertises necessaires. Former et accompagner les collaborateurs. Se faire aider par un expert.
+5. Si la note globale est faible, s'engager dans un audit-diagnostic complet avec plus de 150 points de controle.
+6. Les audits Aravis Performance incluent un diagnostic des causes de non-performance, contextualise a la situation particuliere de l'entreprise (strategie, taille, secteur, marche, diversite produits). Ils sont accompagnes d'un rapport d'audit complet de plus de 20 pages etayant la situation precise de la supply chain a date.
+7. Conclure en invitant a contacter Aravis Performance pour un audit complet ou cible, afin d'obtenir un plan d'actions priorise avec des gains chiffres et un calendrier realiste.
+(9 a 11 phrases)`;
 
     const tryFetch = async (attempt) => {
       const res = await fetch(WORKER_AI_URL, {
