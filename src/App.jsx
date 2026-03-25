@@ -54,9 +54,9 @@ const useAntiCopy = () => {
 };
 
 const WEBHOOK_SHEETS     = "https://hook.eu1.make.com/mvkyqewrwl5dqkpas3q7n6dkaujrlyjr";
-const WEBHOOK_SEND_CODE  = "https://hook.eu1.make.com/4faf2irkquq8czfzvrihsf58easf10lj";
+const WEBHOOK_SEND_CODE  = "https://hook.eu1.make.com/kco13vkgdxkbiyt56htec2nxfs4ah72p";
 const WEBHOOK_CHECK_CODE = "https://hook.eu1.make.com/8rfm5s2uyj7x9frfh33bbvmflejqps8m";
-const WEBHOOK_NOTIFY     = "https://hook.eu1.make.com/kctil9dlcjxp2gv1urswvbi11lmyxi6l";
+const WEBHOOK_NOTIFY     = "https://hook.eu1.make.com/osffevk5713ddnavxlj4yqbgm4346hh9";
 const WORKER_AI_URL      = "https://sc-maturity-ai.jbfleck.workers.dev";
 const CALENDLY_URL       = "https://calendly.com/jbfleck/30min";
 
@@ -439,114 +439,430 @@ export default function App() {
     } catch { setCodeErr("Erreur de vérification. Veuillez réessayer."); }
   };
 
-  const generateComment = async () => {
+  // ── Logique de détection de profil ─────────────────────────────────────
+  const detectProfile = () => {
+    const scores = THEMES.map(t => themeScore(t));
+    const avg = avgScore;
+    const n = scores.length;
+    const stdDev = Math.sqrt(scores.map(s => (s - avg) ** 2).reduce((a, b) => a + b, 0) / n);
+    const maxS = Math.max(...scores);
+    const minS = Math.min(...scores);
+
+    // Scores par thématique nommée
+    const sc   = (t) => themeScore(t);
+    const strategie    = sc("Stratégie Supply Chain");
+    const processus    = sc("Processus & Organisation");
+    const appro        = sc("Approvisionnement & Achats");
+    const serviceClient= sc("Service Client");
+    const stocks       = sc("Gestion des stocks");
+    const flux         = sc("Flux internes");
+    const logistique   = sc("Logistique");
+    const transport    = sc("Transport");
+    const si           = sc("Système d'Information");
+
+    // Profil 1 — Fragile
+    if (avg <= 1.5 && scores.every(s => s <= 2))
+      return "fragile";
+    // Profil 3 — Fort potentiel (bon partout)
+    if (avg >= 3 && scores.every(s => s >= 2.5))
+      return "mature";
+    // Profil 5 — 1 excellent, 1 très en retrait
+    if (maxS >= 4 && minS <= 1)
+      return "champion";
+    // Profil 6 — Fort amont, faible aval
+    if ((appro + stocks) / 2 >= 3.5 && (logistique + transport + serviceClient) / 3 <= 2)
+      return "fort_amont";
+    // Profil 7 — Fort aval, faible amont
+    if ((serviceClient + transport) / 2 >= 3.5 && (appro + stocks) / 2 <= 1.5)
+      return "fort_aval";
+    // Profil 8 — Vision stratégique sans relais opérationnels
+    if ((si + processus) / 2 <= 1.5 && avg >= 1.5 && avg <= 3)
+      return "invisible";
+    // Profil 9 — Dans l'anticipation, manque de structure opérationnelle
+    if (strategie >= 3.5 && (flux + logistique + transport) / 3 <= 2)
+      return "strategie_sans_execution";
+    // Profil 10 — Structure opérationnelle forte, manque d'anticipation
+    if ((flux + logistique + transport) / 3 >= 3.5 && (strategie + processus) / 2 <= 1.5)
+      return "execution_sans_strategie";
+    // Profil 11 — Centrée fondamentaux, manque de transversalité
+    if (si >= 3.5 && (processus + stocks + flux) / 3 <= 2)
+      return "techno_sans_methode";
+    // Profil 4 — Paradoxal (fort écart-type)
+    if (stdDev >= 1.2)
+      return "paradoxal";
+    // Profil 12 — En transition
+    const between2and3 = scores.filter(s => s >= 2 && s <= 3).length;
+    const below2 = scores.filter(s => s < 2).length;
+    if (between2and3 >= 3 && below2 >= 1 && maxS <= 3.5)
+      return "transition";
+    // Profil 2 — En construction (défaut bas/moyen)
+    if (avg <= 2.5)
+      return "construction";
+    // Profil 3 par défaut si avg > 2.5
+    return "mature";
+  };
+
+  // ── Textes préformatés des 12 profils ───────────────────────────────────
+  const PROFILS = {
+    fragile: {
+      maturityLevel: `Votre supply chain opère principalement en mode réactif, au niveau 0 à 1 sur l'échelle de maturité.
+Les processus ne sont pas formalisés et les décisions se prennent au cas par cas.
+Les silos entre fonctions sont très marqués.
+Cette situation recèle un fort potentiel de gains rapides dès lors que les premières actions structurantes sont engagées.`,
+      strengths: `Malgré des scores globalement faibles, votre organisation a su maintenir une activité opérationnelle.
+La capacité à gérer les urgences et à s'adapter témoigne d'une résilience humaine réelle.
+Ce capital humain est une base solide sur laquelle construire.`,
+      improvements: `L'ensemble des thématiques nécessite une attention immédiate.
+La priorité absolue est de formaliser les processus clés et de nommer des responsables identifiés sur chaque fonction.
+Mettre en place des indicateurs de base est indispensable.
+Sans ce socle minimal, toute amélioration restera fragile et non pérenne.`,
+      recommendations: `Ne cherchez pas à tout améliorer simultanément.
+Concentrez vos efforts sur 2 ou 3 chantiers prioritaires à fort impact : la gestion des stocks, le service client et l'organisation.
+Ces trois leviers conditionnent la stabilité de l'ensemble.
+Un accompagnement expert est vivement recommandé pour séquencer les actions et éviter de disperser les ressources.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Visez le prochain niveau de maturité en améliorant en priorité les processus les plus vulnérables.
+Un audit-diagnostic complet avec plus de 150 points de contrôle est la première étape indispensable.
+Il identifiera les causes profondes de non-performance, contextualisées à votre secteur, votre taille et votre stratégie.
+Les audits Aravis Performance incluent un diagnostic des causes de non-performance et un rapport complet de plus de 20 pages.
+Vous obtiendrez une feuille de route priorisée avec des gains chiffrés et un calendrier réaliste.
+Contactez Aravis Performance pour engager cette transformation de façon structurée.`
+    },
+    construction: {
+      maturityLevel: `Votre supply chain se situe entre les niveaux 1 et 2 — Réactive à Maîtrisée.
+Les bases existent dans la plupart des fonctions mais restent cloisonnées et peu mesurées.
+Vous êtes dans une phase de transition où les efforts engagés n'ont pas encore produit tous leurs effets.`,
+      strengths: `L'homogénéité des scores traduit une organisation équilibrée, sans point de rupture critique.
+Les bases existent sur l'ensemble du périmètre supply chain.
+Cela facilite une montée en maturité progressive et cohérente.`,
+      improvements: `L'enjeu principal est de passer d'une logistique subie à une supply chain pilotée.
+Les efforts doivent porter sur la transversalité entre fonctions et le pilotage par les indicateurs.
+La gestion des stocks et le système d'information sont souvent les leviers les plus rentables à ce stade.`,
+      recommendations: `Évitez la tentation de vouloir atteindre l'excellence partout d'un coup.
+Choisissez 2 ou 3 thématiques sur lesquelles concentrer vos investissements et progressez par paliers.
+La mise en place d'un S&OP simplifié et d'indicateurs partagés peut produire des résultats visibles en moins de 6 mois.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Visez le prochain niveau de maturité en améliorant en priorité les processus les plus vulnérables.
+Progressez par paliers : une fois le niveau actuel consolidé, visez le niveau suivant.
+Ces démarches nécessitent des investissements humains, financiers et les expertises adaptées.
+Aravis Performance propose des audits ciblés sur des fonctions spécifiques avec une cinquantaine de points de contrôle.
+Les audits Aravis Performance incluent un diagnostic des causes de non-performance contextualisé à votre situation et un rapport de plus de 20 pages.
+Contactez Aravis Performance pour définir le périmètre d'audit le plus pertinent.`
+    },
+    mature: {
+      maturityLevel: `Votre supply chain affiche un niveau de maturité solide, entre les niveaux 2 et 3 — Maîtrisée à Intégrée.
+Les processus sont structurés, les responsabilités clairement définies et les outils en place.
+Vous avez franchi le cap de la structuration et êtes en mesure de piloter votre performance de façon régulière.
+Votre supply chain a un fort potentiel pour performer au niveau supérieur.`,
+      strengths: `La cohérence entre toutes les thématiques est un atout majeur.
+Votre supply chain fonctionne comme un système intégré, sans maillon faible critique.
+La collaboration interne est effective et les décisions s'appuient sur des données fiables.`,
+      improvements: `L'enjeu est de passer de la performance opérationnelle à l'excellence et à la différenciation.
+Les axes prioritaires sont la digitalisation avancée et la collaboration étendue aux partenaires clés.
+L'intégration de méthodes prédictives constitue le levier suivant.`,
+      recommendations: `Investissez dans les technologies avancées (IA, automatisation, EDI étendu) et dans la formation de vos équipes.
+Les méthodes d'excellence Lean, DDMRP et S&OP avancé sont les étapes naturelles à ce niveau.
+La création d'un service méthodes logistiques est une évolution pertinente.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Visez le prochain niveau de maturité en améliorant les processus les plus vulnérables identifiés dans ce rapport.
+Un audit d'excellence permettra d'identifier les derniers leviers pour viser le niveau optimisé.
+Aravis Performance peut vous accompagner avec un diagnostic approfondi de vos pratiques avancées.
+Les audits incluent un rapport complet de plus de 20 pages et une feuille de route priorisée avec des gains chiffrés.
+Contactez Aravis Performance pour un audit ciblé sur vos fonctions à plus fort potentiel de progression.`
+    },
+    paradoxal: {
+      maturityLevel: `Votre supply chain présente un profil atypique avec de fortes disparités entre thématiques.
+Certaines fonctions atteignent un niveau de maturité élevé, tandis que d'autres restent très en retrait.
+Ce déséquilibre génère des tensions opérationnelles et limite l'effet levier de vos points forts.`,
+      strengths: `Vos fonctions les mieux notées témoignent d'une vraie capacité organisationnelle.
+Ces îlots d'excellence prouvent que votre entreprise sait se structurer quand elle s'en donne les moyens.
+Ils constituent un modèle interne à diffuser vers les autres fonctions.`,
+      improvements: `Les thématiques en retrait créent des ruptures dans la chaîne de valeur.
+Elles limitent en partie les bénéfices de vos points forts.
+L'enjeu est d'atteindre un niveau homogène minimum sur l'ensemble du périmètre.`,
+      recommendations: `Analysez pourquoi certaines fonctions ont réussi à se structurer et d'autres non.
+Transférez les bonnes pratiques des fonctions fortes vers les fonctions en retrait.
+Évitez de sur-investir dans vos points forts tant que les maillons critiques ne sont pas stabilisés.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Visez le prochain niveau de maturité en améliorant en priorité les processus les plus en retrait.
+Aravis Performance propose des audits ciblés sur des fonctions spécifiques avec une cinquantaine de points de contrôle.
+Les audits incluent une analyse contextuelle tenant compte de votre organisation globale.
+Vous obtiendrez un rapport de plus de 20 pages et une feuille de route cohérente avec vos points forts existants.
+Contactez Aravis Performance pour cadrer ensemble le périmètre d'intervention.`
+    },
+    champion: {
+      maturityLevel: `Votre supply chain révèle un point d'excellence et un point de fragilité marqués.
+Vous avez développé une maîtrise remarquable sur au moins une fonction.
+Mais celle-ci coexiste avec une thématique très en retrait qui fragilise l'ensemble.
+Ce profil reflète souvent une organisation qui a concentré ses efforts sur un domaine au détriment d'un autre.`,
+      strengths: `Votre fonction la mieux notée constitue un véritable actif opérationnel.
+Les pratiques, les outils et les compétences développés sur ce domaine sont une ressource précieuse.
+Ils sont à capitaliser et à étendre progressivement à d'autres fonctions.`,
+      improvements: `Votre thématique la plus en retrait représente un risque pour la performance globale.
+Elle peut générer des ruptures et des coûts cachés qui limitent les bénéfices de votre excellence.
+Ce maillon doit être traité en priorité avant tout nouvel investissement sur vos points forts.`,
+      recommendations: `Définissez un plan d'action spécifique sur votre thématique en retrait avec des objectifs à 3, 6 et 12 mois.
+Mobilisez les compétences de votre fonction forte pour accélérer la montée en niveau.
+Ne laissez pas ce déséquilibre s'installer durablement.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Un audit ciblé sur votre thématique la plus en retrait est indispensable.
+Aravis Performance propose des audits focalisés sur des fonctions spécifiques avec une cinquantaine de points de contrôle.
+Les audits incluent un diagnostic précis des causes de non-performance et un rapport de plus de 20 pages.
+Vous obtiendrez un plan d'actions opérationnel et une feuille de route priorisée avec des gains chiffrés.
+Contactez Aravis Performance pour cadrer ensemble le périmètre d'intervention le plus pertinent.`
+    },
+    fort_amont: {
+      maturityLevel: `Votre supply chain maîtrise bien la partie amont — approvisionnements structurés, stocks pilotés.
+Mais elle peine à distribuer correctement et à servir ses clients.
+Ce déséquilibre est typique des entreprises orientées production qui ont négligé la distribution et la relation client.`,
+      strengths: `Vos processus d'approvisionnement et de gestion des stocks sont une base solide.
+La maîtrise des flux entrants vous donne une fiabilité en production que beaucoup d'entreprises n'ont pas.
+Ce socle est précieux pour construire une supply chain complète et cohérente.`,
+      improvements: `Logistique, transport et service client doivent être structurés avec la même rigueur que vos achats.
+Un client mal livré ou mal informé ne perçoit pas vos excellentes pratiques d'approvisionnement.
+Ces trois fonctions aval représentent votre priorité d'investissement.`,
+      recommendations: `Investissez en priorité dans la structuration de votre service client (ADV intégrée, indicateurs de taux de service).
+Professionnalisez votre transport : contrats, suivi des litiges, TMS simplifié.
+L'objectif est d'aligner le niveau de vos fonctions aval sur celui de vos fonctions amont.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Un audit ciblé sur vos fonctions logistique, transport et service client identifiera les leviers les plus efficaces.
+Aravis Performance propose des audits contextualisés à votre secteur et à votre stratégie de distribution.
+Les audits incluent un diagnostic des causes de non-performance et un rapport de plus de 20 pages.
+Vous obtiendrez un plan d'actions priorisé avec des gains chiffrés et un calendrier réaliste.
+Contactez Aravis Performance pour définir le périmètre d'intervention adapté.`
+    },
+    fort_aval: {
+      maturityLevel: `Votre organisation excelle dans la relation client et la livraison.
+Mais elle souffre de fragilités structurelles côté approvisionnement et stocks.
+Vous tenez vos promesses clients... jusqu'au jour où une rupture fournisseur vient tout compromettre.
+La pression commerciale masque un risque opérationnel réel.`,
+      strengths: `Votre culture du service client et votre maîtrise de la distribution sont des atouts différenciants.
+Vos équipes ont développé des réflexes de qualité qui constituent une vraie valeur pour vos clients.
+Cette excellence aval est un avantage concurrentiel à préserver.`,
+      improvements: `L'approvisionnement et la gestion des stocks sont vos zones de fragilité.
+Sans politique de stocks formalisée, vous êtes exposés à des ruptures imprévisibles.
+Ces ruptures peuvent rapidement dégrader la satisfaction client que vous avez mis du temps à construire.`,
+      recommendations: `Formalisez une politique de stocks avec des paramètres calculés (stock de sécurité, point de commande).
+Structurez votre panel fournisseurs avec des contrats et des évaluations régulières.
+L'objectif est de donner à votre excellence client une base d'approvisionnement fiable et prévisible.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Un audit ciblé sur vos fonctions approvisionnement et gestion des stocks est la priorité.
+Aravis Performance peut identifier les causes de vos fragilités amont et proposer un plan d'actions adapté.
+Les audits incluent un diagnostic contextualisé à votre modèle commercial et un rapport de plus de 20 pages.
+Vous obtiendrez une feuille de route priorisée avec des gains chiffrés et un calendrier réaliste.
+Contactez Aravis Performance pour en savoir plus.`
+    },
+    invisible: {
+      maturityLevel: `Votre supply chain dispose d'une vision stratégique mais manque de relais opérationnels.
+Les processus ne sont pas suffisamment documentés et les décisions se prennent sans données fiables.
+Cette absence de visibilité opérationnelle freine la mise en œuvre de toute ambition stratégique.`,
+      strengths: `Malgré l'absence de formalisation, vos opérations fonctionnent.
+Cela témoigne de la compétence et de l'engagement de vos équipes.
+Ce capital humain est précieux et sera un moteur puissant une fois les processus et outils en place.`,
+      improvements: `La priorité absolue est de mettre en place un minimum de visibilité opérationnelle.
+Documenter les processus clés et définir des indicateurs de base sont les premières actions.
+Améliorer l'utilisation de votre ERP existant est souvent le levier le plus rapide.`,
+      recommendations: `Commencez par les 3 ou 4 processus les plus critiques et définissez 5 KPIs essentiels à suivre mensuellement.
+Ces premières actions, simples et rapides, produiront des résultats visibles en quelques semaines.
+On ne peut pas piloter ce qu'on ne mesure pas.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Un audit sur vos processus et votre SI cartographiera les flux et identifiera les ressaisies inutiles.
+Aravis Performance accompagne les PME industrielles dans la structuration de leur pilotage supply chain.
+Les audits incluent un diagnostic des causes de non-performance et un rapport de plus de 20 pages.
+Vous obtiendrez un plan de mise en visibilité progressive adapté à vos contraintes de taille et de budget.
+Contactez Aravis Performance pour engager cette démarche.`
+    },
+    strategie_sans_execution: {
+      maturityLevel: `Votre supply chain a une vraie capacité d'anticipation et une vision stratégique claire.
+Mais le terrain ne suit pas : les ambitions ne se traduisent pas dans les opérations quotidiennes.
+Il existe un écart entre la vision et la réalité opérationnelle, source de frustration pour les équipes.`,
+      strengths: `Avoir une vision stratégique et une capacité d'anticipation est un atout rare.
+La direction comprend les enjeux de la supply chain et est prête à investir.
+C'est un prérequis essentiel que beaucoup d'entreprises n'ont pas encore développé.`,
+      improvements: `Les fonctions opérationnelles — flux internes, logistique et transport — doivent être structurées.
+Elles doivent devenir les courroies de transmission de la stratégie.
+Sans structure opérationnelle solide, la meilleure vision reste lettre morte.`,
+      recommendations: `Identifiez les causes du décalage entre anticipation et exécution : ressources, responsables, outils ?
+Définissez des objectifs opérationnels déclinés de la stratégie avec des jalons trimestriels mesurables.
+Investissez dans la montée en compétences des équipes opérationnelles.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Un audit opérationnel sur vos fonctions flux internes, logistique et transport est la priorité.
+Aravis Performance peut vous aider à construire le pont entre vision stratégique et réalité opérationnelle.
+Les audits incluent un diagnostic des causes de non-performance et un rapport de plus de 20 pages.
+Vous obtiendrez une feuille de route priorisée adaptée à vos capacités d'investissement.
+Contactez Aravis Performance pour cadrer cette intervention.`
+    },
+    execution_sans_strategie: {
+      maturityLevel: `Vos opérations quotidiennes sont solides grâce à des équipes compétentes et engagées.
+Mais la supply chain manque de cap défini et de capacité d'anticipation.
+Sans formalisation ni vision structurée, elle reste vulnérable aux aléas et aux départs de collaborateurs clés.`,
+      strengths: `La solidité opérationnelle de vos équipes est un actif réel.
+Leurs savoir-faire et leur engagement prouvent que votre organisation a les ressources pour réussir.
+Ces compétences sont une base précieuse pour une transformation structurée et durable.`,
+      improvements: `L'absence de stratégie formalisée et de capacité d'anticipation est un frein à la progression.
+Sans formalisation, les bonnes pratiques restent dans les têtes et disparaissent avec les personnes.
+La priorité est de capturer ce que vos équipes font bien pour le rendre pérenne et transmissible.`,
+      recommendations: `Formalisez votre stratégie supply chain en alignement avec la stratégie de l'entreprise.
+Documentez les processus maîtrisés par vos équipes avant de chercher à les améliorer.
+Nommez un responsable supply chain avec un mandat clair, des objectifs définis et les moyens d'investir.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Un audit stratégique et organisationnel formalisera vos atouts opérationnels dans une vision cohérente.
+Aravis Performance accompagne les PME dans la définition de leur stratégie supply chain contextualisée.
+Les audits incluent un diagnostic des causes de non-performance et un rapport de plus de 20 pages.
+Vous obtiendrez une feuille de route priorisée avec des gains chiffrés et un calendrier réaliste.
+Contactez Aravis Performance pour construire ensemble cette feuille de route.`
+    },
+    techno_sans_methode: {
+      maturityLevel: `Votre supply chain est centrée sur ses fondamentaux technologiques mais manque de transversalité.
+Vous disposez d'outils performants (ERP, WMS, TMS) mais les processus sous-jacents restent insuffisamment structurés.
+Les fonctions sont traitées en silos, sans vision d'ensemble ni fluidité des flux entre elles.`,
+      strengths: `Votre investissement technologique est un actif sous-exploité.
+Les outils en place ont le potentiel de transformer votre performance supply chain.
+Il suffit de les adosser à des processus transverses et à une organisation cohérente.`,
+      improvements: `Les processus organisationnels et la gestion des stocks doivent être structurés et alignés sur vos outils.
+La transversalité entre fonctions est le levier principal pour libérer la valeur de vos investissements.
+Sans cette base méthodologique, votre SI continuera à produire des données peu exploitables.`,
+      recommendations: `Auditez l'utilisation réelle de votre ERP et identifiez les fonctionnalités non exploitées.
+Formalisez les processus transverses en vous appuyant sur les fonctionnalités disponibles.
+La rentabilité de vos outils existants peut être améliorée sans nouvel investissement technologique.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Un audit méthodes et processus réconciliera vos outils et votre organisation.
+Aravis Performance apportera un regard externe sur l'adéquation entre vos processus réels et votre SI.
+Les audits incluent un diagnostic des causes de non-performance et un rapport de plus de 20 pages.
+Vous obtiendrez des recommandations concrètes pour maximiser le retour sur vos investissements existants.
+Contactez Aravis Performance pour engager cette démarche.`
+    },
+    transition: {
+      maturityLevel: `Votre supply chain est en cours de structuration, entre les niveaux 1 et 2-3 selon les fonctions.
+Certaines ont amorcé leur transformation, tandis que d'autres restent en retrait.
+Vous êtes dans une phase critique où les acquis restent fragiles et le processus est encore incomplet.`,
+      strengths: `L'élan de transformation est enclenché.
+Plusieurs thématiques progressent simultanément, ce qui témoigne d'une volonté organisationnelle réelle.
+C'est une dynamique précieuse à entretenir et à accélérer.`,
+      improvements: `Les thématiques encore en retrait fragilisent les progrès déjà réalisés.
+La tentation de lancer de nouveaux chantiers avant de consolider les acquis est un piège classique.
+Elle disperse les ressources et dilue les résultats obtenus.`,
+      recommendations: `Finalisez la structuration des fonctions déjà engagées avant d'élargir le périmètre.
+Définissez des critères clairs pour valider qu'un niveau de maturité est réellement atteint et stabilisé.
+Évitez de disperser les ressources sur trop de chantiers simultanés.
+
+Gains potentiels observés chez les PME industrielles accompagnées :
+Performance de livraison : +15 à +30 %
+Réduction des stocks : 25 à 40 %
+Fiabilité des prévisions : +25 à +70 %
+Productivité : +10 à +20 %
+Capacité de production : +10 à +20 %
+Réduction des coûts logistiques : 25 à 40 %`,
+      nextSteps: `Un audit de transition fera le point sur ce qui est consolidé versus ce qui reste fragile.
+Aravis Performance accompagne les entreprises dans ces phases de transition avec une approche pragmatique et séquencée.
+Les audits incluent un diagnostic des causes de non-performance et un rapport de plus de 20 pages.
+Vous obtiendrez un plan d'actions priorisé adapté à vos capacités d'investissement.
+Contactez Aravis Performance pour accélérer votre transformation sur des bases solides.`
+    },
+  };
+
+  const generateComment = () => {
     setLoading(true);
-
-    const sortedByScore = THEMES.map(t => ({ t, s: themeScore(t) })).sort((a,b) => b.s - a.s);
-    const top3 = sortedByScore.slice(0, 3).map(x => `${x.t} : ${x.s}/5`).join(", ");
-    const bottom3 = [...sortedByScore].slice(-3).reverse().map(x => `${x.t} : ${x.s}/5`).join(", ");
-    const ctx = THEMES.map(t=>`${t} : ${themeScore(t)}/5`).join(", ");
-
-    const nextLevel = Math.min(Math.floor(avgScore) + 1, 5);
-    const distToNext = Math.round((nextLevel - avgScore) * 100) / 100;
-    let proximityInstruction = "";
-    if (distToNext <= 0.1) {
-      proximityInstruction = `Score ${avgScore}/5 : a ${distToNext} du niveau ${nextLevel}. Preciser qu'en ciblant 5 chapitres cles, le niveau ${nextLevel} est atteignable rapidement.`;
-    } else if (distToNext <= 0.25) {
-      proximityInstruction = `Score ${avgScore}/5 : a ${distToNext} du niveau ${nextLevel}. Recommander de consolider le niveau actuel sur 3 chapitres prioritaires avant de viser le niveau ${nextLevel}.`;
-    } else {
-      proximityInstruction = `Score ${avgScore}/5 : a ${distToNext} du niveau ${nextLevel}. Pour progresser vers le niveau ${nextLevel}, travailler en profondeur sur 5 chapitres prioritaires.`;
-    }
-
-    const prompt = `Tu es Jean-Baptiste Fleck, consultant expert en supply chain, fondateur d'Aravis Performance, certifie Qualiopi, 25 ans d'experience, plus de 20 audits-diagnostics realises.
-
-Un dirigeant de PME industrielle vient de realiser une auto-evaluation de la maturite de sa supply chain.
-Tous les resultats par thematique : ${ctx}
-Score global : ${avgScore}/5 - Niveau actuel : ${level.label} (niveau ${Math.floor(avgScore)}) - ${level.desc}
-
-Redige une analyse en EXACTEMENT 5 paragraphes separes chacun par UNE LIGNE VIDE.
-REGLES ABSOLUES :
-- TEXTE BRUT UNIQUEMENT. Aucun markdown, aucun #, aucun **, aucun tiret de liste.
-- Chaque phrase fait MAXIMUM 18 mots.
-- Reviens a la ligne apres CHAQUE phrase (une phrase = une ligne).
-- MAXIMUM 700 mots au total.
-- Ton direct, expert, bienveillant.
-- Ne jamais ecrire "mon audit" ni "me contacter". Ecrire "un audit", "l'audit Aravis Performance", "contacter Aravis Performance".
-- Commence chaque paragraphe par son titre en MAJUSCULES sur sa propre ligne.
-
-PARAGRAPHE 1 - titre : VOTRE NIVEAU DE MATURITE
-${proximityInstruction}
-Explique en 3 phrases ce que ce niveau signifie concretement pour l'entreprise.
-(4 a 5 phrases au total)
-
-PARAGRAPHE 2 - titre : POINTS FORTS
-Les 3 meilleures thematiques sont exactement : ${top3}
-Valorise uniquement ces 3 thematiques, pas d'autres.
-Pour chacune, explique concretement ce que le score revele comme pratiques solides en place.
-(6 a 7 phrases)
-
-PARAGRAPHE 3 - titre : POINTS D'AMELIORATION
-Les 3 thematiques avec les scores les plus faibles sont exactement : ${bottom3}
-Traite uniquement ces 3 thematiques, pas d'autres.
-Pour chacune, propose une action concrete et prioritaire a engager.
-(6 a 7 phrases)
-
-PARAGRAPHE 4 - titre : RECOMMANDATIONS
-Commence par rappeler que cette auto-evaluation est declarative et indicative.
-Explique qu'un audit terrain revele souvent des ecarts significatifs avec la perception interne.
-Invite a realiser un audit-diagnostic Aravis Performance pour objectiver la situation reelle.
-Ensuite, presente les 6 gains potentiels EXACTEMENT sur des lignes separees, sans ponctuation finale :
-Performance de livraison : +15 a +30 %
-Reduction des stocks : 25 a 40 %
-Fiabilite des previsions : +25 a +70 %
-Productivite : +10 a +20 %
-Capacite de production : +10 a +20 %
-Reduction des couts logistiques : 25 a 40 %
-(9 a 10 lignes en tout pour ce paragraphe)
-
-PARAGRAPHE 5 - titre : PROCHAINES ETAPES
-Redige ce paragraphe en respectant EXACTEMENT les points suivants, dans cet ordre, en prose fluide :
-1. Viser le prochain niveau de maturite en ameliorant en priorite les processus les plus vulnerables identifies dans ce rapport.
-2. Progresser par paliers : une fois le niveau actuel consolide, viser le niveau suivant. Ces demarches sont longues et necessitent des investissements humains, financiers et les expertises adaptees.
-3. Si necessaire, approfondir les thematiques vulnerables. Aravis Performance propose des audits cibles sur des fonctions specifiques avec une cinquantaine de points de controle sur les processus posant des difficultes.
-4. Construire une feuille de route adaptee aux capacites d'investissement financieres, humaines et aux expertises necessaires. Former et accompagner les collaborateurs. Se faire aider par un expert.
-5. Si la note globale est faible, s'engager dans un audit-diagnostic complet avec plus de 150 points de controle.
-6. Les audits Aravis Performance incluent un diagnostic des causes de non-performance, contextualise a la situation particuliere de l'entreprise (strategie, taille, secteur, marche, diversite produits). Ils sont accompagnes d'un rapport d'audit complet de plus de 20 pages etayant la situation precise de la supply chain a date.
-7. Conclure en invitant a contacter Aravis Performance pour un audit complet ou cible, afin d'obtenir un plan d'actions priorise avec des gains chiffres et un calendrier realiste.
-(9 a 11 phrases)`;
-
-    const tryFetch = async (attempt) => {
-      const res = await fetch(WORKER_AI_URL, {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ prompt, max_tokens:3500 })
-      });
-      if (!res.ok) {
-        const errText = await res.text().catch(()=>"");
-        throw new Error(`HTTP ${res.status}: ${errText.slice(0,200)}`);
-      }
-      const data = await res.json();
-      if (!data.comment) throw new Error("Réponse vide du serveur");
-      return data.comment;
-    };
-
-    let lastErr = "";
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const comment = await tryFetch(attempt);
-        setAiComment(stripMarkdown(comment));
-        setLoading(false);
-        return;
-      } catch(e) {
-        lastErr = e.message || String(e);
-        if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
-      }
-    }
-    setAiComment(`Erreur lors de la génération du commentaire (${lastErr}). Veuillez réessayer.`);
+    const profileKey = detectProfile();
+    const profil = PROFILS[profileKey] || PROFILS.construction;
+    const text = [
+      "VOTRE NIVEAU DE MATURITE",
+      profil.maturityLevel,
+      "",
+      "POINTS FORTS",
+      profil.strengths,
+      "",
+      "POINTS D'AMELIORATION",
+      profil.improvements,
+      "",
+      "RECOMMANDATIONS",
+      profil.recommendations,
+      "",
+      "PROCHAINES ETAPES",
+      profil.nextSteps,
+    ].join("\n");
+    setAiComment(text);
     setLoading(false);
   };
 
-  const sendNotification = async () => {
+    const sendNotification = async () => {
     try {
       await fetch(WEBHOOK_NOTIFY, { method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"}, body:JSON.stringify({
         date:new Date().toLocaleString("fr-FR"), prenom:form.prenom, nom:form.nom,
