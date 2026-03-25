@@ -842,15 +842,29 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
     setLoading(true);
     const profileKey = detectProfile();
     const profil = PROFILS[profileKey] || PROFILS.construction;
+
+    // Calcul des thèmes forts et faibles
+    const sorted = THEMES.map(t => ({ t, s: themeScore(t) })).sort((a,b) => b.s - a.s);
+    const top3 = sorted.slice(0, 3);
+    const bottom3 = sorted.slice(-3).reverse();
+
+    const fmtTheme = ({t, s}) => `${t} (${s}/5)`;
+    const topStr = top3.map(fmtTheme).join(", ");
+    const bottomStr = bottom3.map(fmtTheme).join(", ");
+
+    // Injection des thèmes dans les sections Points forts et Points d'amélioration
+    const strengthsWithThemes = `Vos thématiques les plus solides sont : ${topStr}.\n` + profil.strengths;
+    const improvementsWithThemes = `Les thématiques prioritaires à renforcer sont : ${bottomStr}.\n` + profil.improvements;
+
     const text = [
       "VOTRE NIVEAU DE MATURITE",
       profil.maturityLevel,
       "",
       "POINTS FORTS",
-      profil.strengths,
+      strengthsWithThemes,
       "",
       "POINTS D'AMELIORATION",
-      profil.improvements,
+      improvementsWithThemes,
       "",
       "RECOMMANDATIONS",
       profil.recommendations,
@@ -1285,7 +1299,7 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
       "25 ans d'expérience en Supply Chain & Excellence Opérationnelle",
       "Plus de 20 audits-diagnostics réalisés en 5 ans",
       "Auditeur certifié France Supply Chain & Supply Chain Master",
-      "Maîtrise des référentiels MMOG/LE et Supply Chain Plus",
+      "Maîtrise des référentiels MMOG/LE, Supply Chain Plus, Odette et VDA",
       "Black Belt Lean 6 Sigma",
       "CPIM — Certified in Planning and Inventory Management",
     ];
@@ -1508,8 +1522,8 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
           <p style={{ textAlign:"center",fontSize:12,color:level.color,fontWeight:600,marginBottom:8 }}>
             Moyenne : {avgScore}/5 — {level.label}
           </p>
-          <ResponsiveContainer width="100%" height={480}>
-            <RadarChart data={radarData} margin={{ top:55,right:115,bottom:55,left:115 }}>
+          <ResponsiveContainer width="100%" height={560}>
+            <RadarChart data={radarData} margin={{ top:65,right:130,bottom:65,left:130 }}>
               <PolarGrid />
               <Radar name="Moyenne niveau" dataKey={()=>avgScore}
                 stroke="transparent" fill={level.color} fillOpacity={0.18}
@@ -1716,7 +1730,7 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
             {icon:"⭐",text:"25 années d'expérience en Supply Chain & Excellence Opérationnelle"},
             {icon:"🔍",text:"Plus de 20 audits-diagnostics menés au cours des 5 dernières années"},
             {icon:"🏅",text:"Auditeur certifié France Supply Chain & Supply Chain Master"},
-            {icon:"📋",text:"Maîtrise des référentiels MMOG/LE et Supply Chain Plus"},
+            {icon:"📋",text:"Maîtrise des référentiels MMOG/LE, Supply Chain Plus, Odette et VDA"},
             {icon:"🥋",text:"Black Belt Lean 6 Sigma"},
             {icon:"🎓",text:"CPIM — Certified in Planning and Inventory Management"},
           ].map((item,i)=>(
