@@ -1298,7 +1298,7 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
     const jbfItems = [
       "25 ans d'expérience en Supply Chain & Excellence Opérationnelle",
       "Plus de 20 audits-diagnostics réalisés en 5 ans",
-      "Auditeur certifié France Supply Chain & Supply Chain Master",
+      "Auditeur certifié Supply Chain Master et France Supply Chain — Aslog",
       "Maîtrise des référentiels MMOG/LE, Supply Chain Plus, Odette et VDA",
       "Black Belt Lean 6 Sigma",
       "CPIM — Certified in Planning and Inventory Management",
@@ -1729,7 +1729,7 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
           {[
             {icon:"⭐",text:"25 années d'expérience en Supply Chain & Excellence Opérationnelle"},
             {icon:"🔍",text:"Plus de 20 audits-diagnostics menés au cours des 5 dernières années"},
-            {icon:"🏅",text:"Auditeur certifié France Supply Chain & Supply Chain Master"},
+            {icon:"🏅",text:"Auditeur certifié Supply Chain Master et France Supply Chain — Aslog"},
             {icon:"📋",text:"Maîtrise des référentiels MMOG/LE, Supply Chain Plus, Odette et VDA"},
             {icon:"🥋",text:"Black Belt Lean 6 Sigma"},
             {icon:"🎓",text:"CPIM — Certified in Planning and Inventory Management"},
