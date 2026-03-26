@@ -1303,26 +1303,20 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
       "Black Belt Lean 6 Sigma",
       "CPIM — Certified in Planning and Inventory Management",
     ];
-    const colW = contentW / 2 - 4;
-    const rowH2 = 12; // hauteur par item (assez pour 2 lignes si nécessaire)
-    doc.setFontSize(10); doc.setFont("helvetica","normal");
+    // Items expertise — disposition verticale pleine largeur pour éviter troncatures
+    doc.setFontSize(9.5); doc.setFont("helvetica","normal");
     jbfItems.forEach((item, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const ix = col === 0 ? margin : margin + contentW/2 + 4;
-      const iy = y + row * rowH2;
-      if (iy + 6 > 283) return;
+      if (y > 278) { doc.addPage(); y = 20; }
       const rgb = hexToRgb(MATURITY_LEVELS[Math.min(i, 5)].color);
       doc.setFillColor(...rgb);
-      doc.circle(ix + 2, iy + 1, 1.8, "F");
+      doc.circle(margin + 2, y + 1, 1.8, "F");
       doc.setTextColor(...dark);
-      const txt = doc.splitTextToSize(item, colW - 6);
+      const txt = doc.splitTextToSize(item, contentW - 8);
       txt.forEach((line, li) => {
-        if (iy + 3 + li * 4.5 > 283) return;
-        doc.text(line, ix + 6, iy + 3 + li * 4.5);
+        doc.text(line, margin + 7, y + 1 + li * 4.8);
       });
+      y += txt.length * 4.8 + 4;
     });
-    y += Math.ceil(jbfItems.length / 2) * rowH2 + 4;
 
     const pageCount = doc.internal.getNumberOfPages();
     for (let i=1; i<=pageCount; i++) {
