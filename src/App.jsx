@@ -1299,12 +1299,12 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
       "25 ans d'expérience en Supply Chain & Excellence Opérationnelle",
       "Plus de 20 audits-diagnostics réalisés en 5 ans",
       "Auditeur certifié Supply Chain Master et France Supply Chain — Aslog",
-      "Maîtrise des référentiels MMOG/LE, Supply Chain Plus, Odette et VDA",
+      "Maîtrise des référentiels MMOG/LE et Supply Chain Plus",
       "Black Belt Lean 6 Sigma",
       "CPIM — Certified in Planning and Inventory Management",
     ];
     const colW = contentW / 2 - 4;
-    const rowH2 = 9;
+    const rowH2 = 12; // hauteur par item (assez pour 2 lignes si nécessaire)
     doc.setFontSize(10); doc.setFont("helvetica","normal");
     jbfItems.forEach((item, i) => {
       const col = i % 2;
@@ -1317,7 +1317,10 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
       doc.circle(ix + 2, iy + 1, 1.8, "F");
       doc.setTextColor(...dark);
       const txt = doc.splitTextToSize(item, colW - 6);
-      doc.text(txt[0], ix + 6, iy + 3);
+      txt.forEach((line, li) => {
+        if (iy + 3 + li * 4.5 > 283) return;
+        doc.text(line, ix + 6, iy + 3 + li * 4.5);
+      });
     });
     y += Math.ceil(jbfItems.length / 2) * rowH2 + 4;
 
@@ -1730,7 +1733,7 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
             {icon:"⭐",text:"25 années d'expérience en Supply Chain & Excellence Opérationnelle"},
             {icon:"🔍",text:"Plus de 20 audits-diagnostics menés au cours des 5 dernières années"},
             {icon:"🏅",text:"Auditeur certifié Supply Chain Master et France Supply Chain — Aslog"},
-            {icon:"📋",text:"Maîtrise des référentiels MMOG/LE, Supply Chain Plus, Odette et VDA"},
+            {icon:"📋",text:"Maîtrise des référentiels MMOG/LE et Supply Chain Plus"},
             {icon:"🥋",text:"Black Belt Lean 6 Sigma"},
             {icon:"🎓",text:"CPIM — Certified in Planning and Inventory Management"},
           ].map((item,i)=>(
