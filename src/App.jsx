@@ -6,6 +6,32 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// ── Hook détection mobile ────────────────────────────────────────────────────
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 640 : false
+  );
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isMobile;
+};
+
+// ── Noms abrégés pour mobile ─────────────────────────────────────────────────
+const THEMES_SHORT = {
+  "Stratégie Supply Chain":      "Stratégie SC",
+  "Processus & Organisation":    "Processus",
+  "Approvisionnement & Achats":  "Appro. & Achats",
+  "Service Client":              "Serv. Client",
+  "Gestion des stocks":          "Stocks",
+  "Flux internes":               "Flux int.",
+  "Logistique":                  "Logistique",
+  "Transport":                   "Transport",
+  "Système d'Information":       "SI",
+};
+
 // ── Protections anti-copie ───────────────────────────────────────────────────
 const useAntiCopy = () => {
   useEffect(() => {
@@ -379,6 +405,7 @@ const drawBarChartPDF = (doc, startX, startY, chartW, barData, avgScore) => {
 // ── Main component ───────────────────────────────────────────────────────────
 export default function App() {
   useAntiCopy();
+  const isMobile = useIsMobile();
   const [step, setStep]               = useState("intro");
   const [answers, setAnswers]         = useState({});
   const [current, setCurrent]         = useState(0);
@@ -408,7 +435,11 @@ export default function App() {
   };
   const avgScore = Math.round(THEMES.reduce((a,t)=>a+themeScore(t),0)/THEMES.length*10)/10;
   const level = getLevel(avgScore);
-  const radarData = THEMES.map(t => ({ theme:t, score:themeScore(t), fullMark:5 }));
+  const radarData = THEMES.map(t => ({
+    theme: isMobile ? THEMES_SHORT[t] || t : t,
+    score: themeScore(t),
+    fullMark: 5,
+  }));
   const barData = [...THEMES.map(t => ({ theme:t, score:themeScore(t) }))].sort((a,b)=>a.score-b.score);
   const aiSections = parseAiSections(aiComment);
 
@@ -1519,33 +1550,38 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
           <p style={{ textAlign:"center",fontSize:12,color:level.color,fontWeight:600,marginBottom:8 }}>
             Moyenne : {avgScore}/5 — {level.label}
           </p>
-          <ResponsiveContainer width="100%" height={560}>
-            <RadarChart data={radarData} margin={{ top:65,right:130,bottom:65,left:130 }}>
+          <ResponsiveContainer width="100%" height={isMobile ? 380 : 560}>
+            <RadarChart data={radarData} margin={isMobile
+              ? { top:35, right:60, bottom:35, left:60 }
+              : { top:65, right:130, bottom:65, left:130 }}>
               <PolarGrid />
               <Radar name="Moyenne niveau" dataKey={()=>avgScore}
                 stroke="transparent" fill={level.color} fillOpacity={0.18}
                 dot={false} legendType="none" />
               <PolarAngleAxis dataKey="theme" tick={(props)=>{
                 const {x,y,cx,cy,payload}=props;
+                const maxLen = isMobile ? 10 : 14;
                 const words=payload.value.split(" ");
                 const lines=[]; let curr="";
                 words.forEach(w=>{
-                  if((curr+" "+w).trim().length>14){if(curr)lines.push(curr);curr=w;}
+                  if((curr+" "+w).trim().length>maxLen){if(curr)lines.push(curr);curr=w;}
                   else{curr=(curr+" "+w).trim();}
                 });
                 if(curr)lines.push(curr);
                 const anchor=Math.abs(x-cx)<10?"middle":x>cx?"start":"end";
+                const fs = isMobile ? 9 : 11;
+                const dy = isMobile ? 13 : 16;
                 return (
-                  <text x={x} y={y} textAnchor={anchor} fill="#0f172a" fontSize={11} fontWeight={600}>
-                    {lines.map((line,i)=><tspan key={i} x={x} dy={i===0?`-${(lines.length-1)*8}`:"16"}>{line}</tspan>)}
+                  <text x={x} y={y} textAnchor={anchor} fill="#0f172a" fontSize={fs} fontWeight={600}>
+                    {lines.map((line,i)=><tspan key={i} x={x} dy={i===0?`-${(lines.length-1)*(dy-3)}`:`${dy}`}>{line}</tspan>)}
                   </text>
                 );
               }}/>
-              <PolarRadiusAxis angle={30} domain={[0,5]} tick={{fontSize:9}} tickCount={6}/>
+              <PolarRadiusAxis angle={30} domain={[0,5]} tick={{fontSize: isMobile ? 8 : 9}} tickCount={6}/>
               <Radar name="Score" dataKey="score" stroke={C1} fill={C1} fillOpacity={0.25} strokeWidth={1}
-                dot={{ r:3, fill:C1 }}
+                dot={{ r: isMobile ? 2 : 3, fill:C1 }}
                 label={({ x, y, value }) => (
-                  <text x={x+4} y={y-4} fontSize={10} fontWeight={700} fill={C1} textAnchor="start">{value}</text>
+                  <text x={x+3} y={y-3} fontSize={isMobile ? 9 : 10} fontWeight={700} fill={C1} textAnchor="start">{value}</text>
                 )}
               />
             </RadarChart>
@@ -1556,10 +1592,13 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
         <div style={{ background:"#fff",borderRadius:16,padding:32,boxShadow:"0 4px 24px #0001",marginBottom:20 }}>
           <h2 style={{ fontSize:15,fontWeight:600,color:"#0f172a",marginBottom:4,textAlign:"center" }}>Scores par thématique</h2>
           <p style={{ textAlign:"center",fontSize:12,color:"#dc2626",fontWeight:600,marginBottom:16 }}>— — Moyenne : {avgScore}/5</p>
-          <ResponsiveContainer width="100%" height={360}>
-            <BarChart data={barData} layout="vertical" margin={{ top:20,right:72,bottom:0,left:172 }}>
-              <XAxis type="number" domain={[0,5]} tickCount={6} tick={{fontSize:10}}/>
-              <YAxis type="category" dataKey="theme" tick={{fontSize:13,fill:"#475569"}} width={167}/>
+          <ResponsiveContainer width="100%" height={isMobile ? 320 : 360}>
+            <BarChart data={barData} layout="vertical"
+              margin={{ top:20, right: isMobile ? 40 : 72, bottom:0, left: isMobile ? 4 : 172 }}>
+              <XAxis type="number" domain={[0,5]} tickCount={6} tick={{fontSize: isMobile ? 9 : 10}}/>
+              <YAxis type="category" dataKey="theme"
+                tick={{fontSize: isMobile ? 9 : 13, fill:"#475569"}}
+                width={isMobile ? 110 : 167}/>
               <Tooltip formatter={(v)=>[`${v}/5`,"Score"]}/>
               <Bar dataKey="score" radius={[0,6,6,0]}>
                 {barData.map((entry,i)=><Cell key={i} fill={getLevel(entry.score).color}/>)}
