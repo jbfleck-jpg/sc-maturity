@@ -80,8 +80,6 @@ const useAntiCopy = () => {
 };
 
 const WEBHOOK_SHEETS     = "https://hook.eu1.make.com/mvkyqewrwl5dqkpas3q7n6dkaujrlyjr";
-const WEBHOOK_SEND_CODE  = "https://hook.eu1.make.com/1eer93yy8vfc1y5eexgmt17vmdu16xmo";
-const WEBHOOK_CHECK_CODE = "https://hook.eu1.make.com/8rfm5s2uyj7x9frfh33bbvmflejqps8m";
 const WEBHOOK_NOTIFY     = "https://hook.eu1.make.com/ry2lbyviun76atvwycerm27bqf5ty2fe";
 const WORKER_AI_URL      = "https://sc-maturity-ai.jbfleck.workers.dev";
 const CALENDLY_URL       = "https://calendly.com/jbfleck/30min";
@@ -414,6 +412,7 @@ export default function App() {
   const [codeInput, setCodeInput]     = useState("");
   const [codeErr, setCodeErr]         = useState("");
   const [codeSending, setCodeSending] = useState(false);
+  const [verifyCode]  = useState(() => String(Math.floor(100000 + Math.random() * 900000)));
   const [aiComment, setAiComment]     = useState("");
   const [loading, setLoading]         = useState(false);
   const [sheetStatus, setSheetStatus] = useState("idle");
@@ -455,19 +454,26 @@ export default function App() {
     if (!isProEmail(form.email)) { setEmailErr("Merci de saisir votre email professionnel (Gmail, Hotmail, Yahoo et autres messageries personnelles non acceptées)."); return; }
     setCodeSending(true);
     try {
-      await fetch(WEBHOOK_SEND_CODE, { method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"}, body:JSON.stringify({ email:form.email, prenom:form.prenom }) });
+      // Appel direct Worker Cloudflare — plus de Make webhook
+      const res = await fetch(WORKER_AI_URL + "/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, prenom: form.prenom, code: verifyCode }),
+      });
+      if (!res.ok) throw new Error("Erreur envoi email");
       setStep("email_verify");
       generateComment();
     } catch { setEmailErr("Erreur lors de l'envoi du code. Veuillez réessayer."); }
     setCodeSending(false);
   };
 
-  const handleVerifyCode = async () => {
+  const handleVerifyCode = () => {
     setCodeErr("");
-    try {
-      await fetch(WEBHOOK_CHECK_CODE, { method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"}, body:JSON.stringify({ email:form.email, code:codeInput.trim() }) });
-      setStep("result");
-    } catch { setCodeErr("Erreur de vérification. Veuillez réessayer."); }
+    if (codeInput.trim() !== verifyCode) {
+      setCodeErr("Code incorrect. Vérifiez votre email.");
+      return;
+    }
+    setStep("result");
   };
 
   // ── Logique de détection de profil ─────────────────────────────────────
