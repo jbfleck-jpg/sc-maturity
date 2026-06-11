@@ -81,7 +81,7 @@ const useAntiCopy = () => {
 
 const WEBHOOK_SHEETS     = "https://hook.eu1.make.com/mvkyqewrwl5dqkpas3q7n6dkaujrlyjr";
 const WEBHOOK_NOTIFY     = "https://hook.eu1.make.com/ry2lbyviun76atvwycerm27bqf5ty2fe";
-const WORKER_AI_URL      = "https://sc-maturity-ai.jbfleck.workers.dev";
+const WORKER_AI_URL      = "https://sc-maturity-ai.jbfleck-e2e.workers.dev";
 const CALENDLY_URL       = "https://calendly.com/jbfleck/30min";
 
 const C1 = "#0C2F72";
