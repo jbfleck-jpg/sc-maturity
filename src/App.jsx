@@ -79,8 +79,6 @@ const useAntiCopy = () => {
   }, []);
 };
 
-const WEBHOOK_SHEETS     = "https://hook.eu1.make.com/mvkyqewrwl5dqkpas3q7n6dkaujrlyjr";
-const WEBHOOK_NOTIFY     = "https://hook.eu1.make.com/ry2lbyviun76atvwycerm27bqf5ty2fe";
 const WORKER_AI_URL      = "https://sc-maturity-ai.jbfleck-e2e.workers.dev";
 const CALENDLY_URL       = "https://calendly.com/jbfleck/30min";
 
@@ -913,44 +911,41 @@ Contactez Aravis Performance pour accélérer votre transformation sur des bases
     setLoading(false);
   };
 
-    const sendNotification = async () => {
-    try {
-      await fetch(WEBHOOK_NOTIFY, { method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"}, body:JSON.stringify({
-        date:new Date().toLocaleString("fr-FR"), prenom:form.prenom, nom:form.nom,
-        entreprise:form.entreprise, email:form.email, score_global:avgScore, niveau:level.label,
-        recontact_tel:contactPref.phone?"Oui":"Non",
-        telephone:phoneNumber||"",
-        recontact_email:contactPref.email?"Oui":"Non",
-      })});
-    } catch {}
-  };
-
-  const sendToSheets = async () => {
-    if (!WEBHOOK_SHEETS) { setSheetStatus("error"); return; }
+  // ── Sauvegarde résultats : Excel OneDrive + notification (via Worker) ────
+  const saveResults = async () => {
     setSheetStatus("sending");
-    const payload = {
-      date:new Date().toLocaleString("fr-FR"), prenom:form.prenom, nom:form.nom,
-      entreprise:form.entreprise, email:form.email, score_global:avgScore, niveau:level.label,
-      recontact_non:contactPref.none?"Oui":"Non",
-      recontact_tel:contactPref.phone?"Oui":"Non",
-      telephone:phoneNumber||"",
-      recontact_email:contactPref.email?"Oui":"Non",
-      ...Object.fromEntries(QUESTIONS.flatMap((q,i) => {
-        const k=`Q${i+1}`;
-        return [[`${k}_theme`,q.theme],[`${k}_reponse`,q.options[qScore(i)]],[`${k}_score`,qScore(i)]];
-      })),
-      ...Object.fromEntries(THEMES.map(t=>[`score_${t.replace(/[^a-zA-Z]/g,"_").toLowerCase()}`,themeScore(t)])),
-      commentaire_ia:aiComment,
-    };
     try {
-      await fetch(WEBHOOK_SHEETS, { method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"}, body:JSON.stringify(payload) });
-      setSheetStatus("ok");
+      const res = await fetch(WORKER_AI_URL + "/save-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: new Date().toLocaleString("fr-FR"),
+          prenom: form.prenom, nom: form.nom,
+          entreprise: form.entreprise, email: form.email,
+          score_global: avgScore, niveau: level.label,
+          scores: {
+            strategie:  themeScore("Stratégie Supply Chain"),
+            processus:  themeScore("Processus & Organisation"),
+            appro:      themeScore("Approvisionnement & Achats"),
+            service:    themeScore("Service Client"),
+            stocks:     themeScore("Gestion des stocks"),
+            flux:       themeScore("Flux internes"),
+            logistique: themeScore("Logistique"),
+            transport:  themeScore("Transport"),
+            si:         themeScore("Système d'Information"),
+          },
+          profil: detectProfile(),
+          recontact_tel: contactPref.phone ? "Oui" : "Non",
+          telephone: phoneNumber || "",
+          recontact_email: contactPref.email ? "Oui" : "Non",
+        }),
+      });
+      setSheetStatus(res.ok ? "ok" : "error");
     } catch { setSheetStatus("error"); }
   };
 
   const exportResult = async () => {
-    await sendToSheets();
-    if (contactPref.phone || contactPref.email) await sendNotification();
+    await saveResults();
 
     const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
     const blue=[12,47,114]; const dark=[15,23,42]; const gray=[71,85,105]; const lightBlue=[239,246,255];
